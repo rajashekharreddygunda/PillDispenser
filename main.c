@@ -2,18 +2,16 @@
 #include <at89x52.h>
 #include <compiler.h>
 
-#define DS1307_ADDRESS  0x68 //address of rtc
+#define DS3232_ADDRESS 0x68 // address of rtc
+
+#define AT24C512B_ADDRESS 0X50 // address of eeprom
 
 #define NUM_ALARMS 8 // maximum number of alarms 
 
-#define ALARM_RAM_BASE 0x08  // DS1307 RAM starts at 0x08
+#define EEPROM_BASE 0x0000  // 24lc32a RAM starts at 0x00
 
 #define STEPS 137 // number of steps for stepper motor [48byj-28] to rotate 12 degrees
 
-unsigned char dummy;
-
-volatile __bit edit_mode = 0;  // Global flag to enter clock-edit mode
-volatile __bit touch_sensor = 0;  // global flag to enter alarm settings
 
 unsigned char __idata alarm_hours[NUM_ALARMS];  //to store alarm hours
 unsigned char __idata alarm_minutes[NUM_ALARMS];  //to store alarm minutes
@@ -31,9 +29,8 @@ char time_str[9];
 char date_str[13];
 char buf[3];
 unsigned char hr, min;
-volatile __bit clock_check = 0;
-volatile __bit alarm_check = 0;
-int count_down;
+
+__bit wake_flag = 0;
 
 //lcd connections
 SBIT(LCD_RS, 0x90, 0);
@@ -48,14 +45,12 @@ SBIT(LCD_D7, 0x90, 6);
 SBIT(RESET, 0x90, 7);
 
 //Button connections
-SBIT(clock, 0xB0, 2);
-SBIT(alarm, 0xB0, 3);
 SBIT(up, 0xB0, 4);
 SBIT(down, 0xB0, 5);
 SBIT(next, 0xB0, 6);
 SBIT(back, 0xB0, 7);
 
-//RTC connections
+//I2C connections
 SBIT(SDA, 0xB0, 1);
 SBIT(SCL, 0xB0, 0);
 
@@ -126,7 +121,6 @@ void lcd_goto(unsigned char row, unsigned char col) {
 	unsigned char address = (row == 0) ? (0x80 + col) : (0xC0 + col);
 	lcd_cmd(address);
 }
-
 
 void lcd_init() {
 	LCD_RS = 0;
@@ -230,17 +224,17 @@ unsigned char bcd_to_dec(unsigned char val) {
 	return ((val >> 4) * 10) + (val & 0x0F);
 }
 
-void ds1307_init(void) {
+void ds3232_init(void) {
 	i2c_start();
-	i2c_write((DS1307_ADDRESS << 1) | 0); // Write mode
+	i2c_write((DS3232_ADDRESS << 1) | 0); // Write mode
 	i2c_write(0x00); // Point to seconds register
 	i2c_write(0x00); // Start oscillator (CH = 0)
 	i2c_stop();
 }
 
-void ds1307_set_time_date(unsigned char hrs, unsigned char min, unsigned char sec, unsigned char day, unsigned char date, unsigned char month, unsigned char year) {
+void ds3232_set_time_date(unsigned char hrs, unsigned char min, unsigned char sec, unsigned char day, unsigned char date, unsigned char month, unsigned char year) {
 	i2c_start();
-	i2c_write((DS1307_ADDRESS << 1) | 0);
+	i2c_write((DS3232_ADDRESS << 1) | 0);
 	i2c_write(0x00);
 	i2c_write(dec_to_bcd(sec));
 	i2c_write(dec_to_bcd(min));
@@ -252,14 +246,14 @@ void ds1307_set_time_date(unsigned char hrs, unsigned char min, unsigned char se
 	i2c_stop();
 }
 
-void ds1307_get_time_date(unsigned char *hrs, unsigned char *min, unsigned char *sec, unsigned char *day, unsigned char *date, unsigned char *month, unsigned char *year) {
+void ds3232_get_time_date(unsigned char *hrs, unsigned char *min, unsigned char *sec, unsigned char *day, unsigned char *date, unsigned char *month, unsigned char *year) {
 	i2c_start();
-	i2c_write((DS1307_ADDRESS << 1) | 0);
+	i2c_write((DS3232_ADDRESS << 1) | 0);
 	i2c_write(0x00);
 	i2c_stop();
 
 	i2c_start();
-	i2c_write((DS1307_ADDRESS << 1) | 1);
+	i2c_write((DS3232_ADDRESS << 1) | 1);
 	*sec   = bcd_to_dec(i2c_read(1));
 	*min   = bcd_to_dec(i2c_read(1));
 	*hrs   = bcd_to_dec(i2c_read(1));
@@ -269,7 +263,6 @@ void ds1307_get_time_date(unsigned char *hrs, unsigned char *min, unsigned char 
 	*year  = bcd_to_dec(i2c_read(0));
 	i2c_stop();
 }
-
 
 void display(unsigned char h, unsigned char m, unsigned char s, unsigned char d, unsigned char mo, unsigned char y, unsigned char day ) {
 	int_to_str(h, buf);
@@ -401,56 +394,114 @@ void step_motor(int step) {
 	}
 }
 
-
-void Settings(void) __interrupt(0) {
-	EX0 = 0;          // Disable external interrupt
-	edit_mode = 1;    // Signal main loop to enter edit mode
-	EX0 = 1;          // Re-enable interrupt
-}
-
-void ds1307_write_ram(unsigned char addr, unsigned char value) {
+void write_eeprom(unsigned int addr, unsigned char value) {
 	// Ensure address is within valid RAM range
-	if (addr < 0x08 || addr > 0x3F) return;
+	if (addr > 0x0FFF) return;
 
 	i2c_start();
-	i2c_write((DS1307_ADDRESS << 1) | 0);  // Write mode
-	i2c_write(addr);                       // RAM address
+	i2c_write((AT24C512B_ADDRESS << 1) | 0);  // Write mode
+	i2c_write((addr>>8) & 0xFF);                       // upper byte RAM address
+	i2c_write(addr & 0xFF);				  			  // lower byte RAM address
 	i2c_write(value);                      // Data
 	i2c_stop();
+	delay(500);
 }
 
-
-unsigned char ds1307_read_ram(unsigned char addr) {
+unsigned char read_eeprom(unsigned int addr) {
 	unsigned char data;
 
-	if (addr < 0x08 || addr > 0x3F) return 0xFF; // Return invalid value if out of range
+	if (addr > 0x0FFF) return 0xFF; // Return invalid value if out of range
 
 	i2c_start();
-	i2c_write((DS1307_ADDRESS << 1) | 0);  // Write mode to set address pointer
-	i2c_write(addr);
+	i2c_write((AT24C512B_ADDRESS << 1) | 0);  // Write mode to set address pointer
+	i2c_write((addr>>8) & 0xFF); 
+	i2c_write(addr & 0xFF);	
 
 	i2c_start();                           // Repeated start
-	i2c_write((DS1307_ADDRESS << 1) | 1);  // Read mode
+	i2c_write((AT24C512B_ADDRESS << 1) | 1);  // Read mode
 	data = i2c_read(0);                    // No ACK
 	i2c_stop();
-
+	delay(500);
 	return data;
 }
 
-
-void write_alarm_to_ds1307(unsigned char index, unsigned char h, unsigned char m) {
-	ds1307_write_ram(ALARM_RAM_BASE + (index * 2) + 1, h);
-	ds1307_write_ram(ALARM_RAM_BASE + (index * 2) + 2, m);
+void write_alarm_to_eeprom(unsigned char index, unsigned char h, unsigned char m) {
+	write_eeprom(EEPROM_BASE + (index * 2) + 1, h);
+	write_eeprom(EEPROM_BASE + (index * 2) + 2, m);
 }
 
-void load_alarms_from_ds1307(unsigned char count_) {
-	for (unsigned char i = 0; i < count_; i++) {
-		alarm_hours[i] = ds1307_read_ram(ALARM_RAM_BASE + (i * 2) + 1);
-		alarm_minutes[i] = ds1307_read_ram(ALARM_RAM_BASE + (i * 2) + 2);
-	}
+
+void alarm_arranger(unsigned char hours[], unsigned char minutes[], unsigned char *n){
+	    unsigned char i, j, min_idx;
+
+    // Step 1: Sort using selection sort
+    for (i = 0; i < *n - 1; i++) {
+        min_idx = i;
+        for (j = i + 1; j < *n; j++) {
+            if (hours[j] < hours[min_idx] || (hours[j] == hours[min_idx] && minutes[j] < minutes[min_idx])) {
+                min_idx = j;
+            }
+        }
+        // Swap hours
+        unsigned temp = hours[i];
+        hours[i] = hours[min_idx];
+        hours[min_idx] = temp;
+
+        // Swap minutes
+        temp = minutes[i];
+        minutes[i] = minutes[min_idx];
+        minutes[min_idx] = temp;
+    }
+
+    // Step 2: Remove duplicates in-place
+    int __index = 1; // points to next unique position
+    for (i = 1; i < *n; i++) {
+        if (!(hours[i] == hours[__index - 1] && minutes[i] == minutes[__index - 1])) {
+            hours[__index] = hours[i];
+            minutes[__index] = minutes[i];
+            __index++;
+        }
+    }
+
+    // Update n to new size
+    *n = __index;
+
+}
+
+void ds3232_set_alarm1(unsigned char hrs, unsigned char min, unsigned char sec) {
+    // Convert to BCD
+    unsigned char bcd_sec = dec_to_bcd(sec);
+    unsigned char bcd_min = dec_to_bcd(min);
+    unsigned char bcd_hrs = dec_to_bcd(hrs);
+
+    // Set Alarm 1 for exact time match: hrs:min:sec (A1M1=0, A1M2=0, A1M3=0, A1M4=1)
+    i2c_start();
+    i2c_write((DS3232_ADDRESS << 1) | 0);  // Write mode
+    i2c_write(0x07); // Alarm1 register start
+
+    i2c_write(bcd_sec & 0x7F);      // A1 Seconds, A1M1 = 0
+    i2c_write(bcd_min & 0x7F);      // A1 Minutes, A1M2 = 0
+    i2c_write(bcd_hrs & 0x7F);      // A1 Hours, A1M3 = 0
+    i2c_write(0x80);                // A1 Day/Date, A1M4 = 1 (don’t care about day/date)
+    i2c_stop();
+
+    // Enable Alarm1 interrupt, INTCN = 1
+    i2c_start();
+    i2c_write((DS3232_ADDRESS << 1) | 0);
+    i2c_write(0x0E); // Control register
+    i2c_write(0x05); // 00000101 => A1IE = 1, INTCN = 1
+    i2c_stop();
+
+    // Clear Alarm1 flag (bit 0) in status register
+    i2c_start();
+    i2c_write((DS3232_ADDRESS << 1) | 0);
+    i2c_write(0x0F); // Status register
+    i2c_write(0x00); // Clear A1F
+    i2c_stop();
 }
 
 void set_clock() {
+	idle_counter = 0;
 	index = 0;
 	display(time_date[0], time_date[1], time_date[2], time_date[4], time_date[5], time_date[6], time_date[3] + 1);
 
@@ -493,14 +544,15 @@ void set_clock() {
 		}
 	}
 	if (idle_counter <= 30) {
-		ds1307_set_time_date(time_date[0], time_date[1], time_date[2], time_date[3] + 1, time_date[4], time_date[5], time_date[6]);
+		ds3232_set_time_date(time_date[0], time_date[1], time_date[2], time_date[3] + 1, time_date[4], time_date[5], time_date[6]);
 	}
 
 	idle_counter = 0;
 }
 
-
 void set_alarms() {
+	idle_counter = 0;
+	unsigned char i;
 	// Step 1: Ask user how many alarms
 	lcd_clear();
 	lcd_goto(0, 0);
@@ -524,7 +576,6 @@ void set_alarms() {
 
 		if (!next) {
 			delay(10000);
-			ds1307_write_ram(0x08, num_alarms);
 			break;
 		}
 
@@ -540,7 +591,7 @@ void set_alarms() {
 	}
 
 	// Step 2: Loop for each alarm
-	for (unsigned char i = 0; i < num_alarms; i++) {
+	for (i = 0; i < num_alarms; i++) {
 		idle_counter = 0;
 
 		// Set hour
@@ -626,12 +677,35 @@ void set_alarms() {
 
 		alarm_hours[i] = hr;
 		alarm_minutes[i] = min;
-		write_alarm_to_ds1307(i, hr, min);
-
 		lcd_clear();
 		lcd_string(" Alarm Saved");
 		delay(25000);
 	}
+	alarm_arranger(alarm_hours, alarm_minutes, &num_alarms);
+	write_eeprom(EEPROM_BASE, num_alarms);
+
+	for(i = 0; i < num_alarms; i++) {
+		write_alarm_to_eeprom(i, alarm_hours[i], alarm_minutes[i]);
+	}
+	ds3232_get_time_date(&h, &m, &s, &day, &d, &mo, &y);
+	int total_mins = (h*60)+min;
+
+	if (total_mins >= (alarm_hours[num_alarms - 1] * 60 + alarm_minutes[num_alarms - 1])) {
+    	ds3232_set_alarm1(alarm_hours[0], alarm_minutes[0], 0);
+    	write_eeprom(0x003A, 0);
+	}
+
+	else{
+		for(i=0; i<num_alarms-1; i++){
+			int total_mins1 = (alarm_hours[i]*60)+alarm_minutes[i];
+			int total_mins2 = (alarm_hours[i+1]*60)+alarm_minutes[i+1];
+			if (total_mins>= total_mins1 && total_mins<total_mins2){
+				ds3232_set_alarm1(alarm_hours[i+1], alarm_minutes[i+1], 0);
+				write_eeprom(0x003A, (i+1)%num_alarms);
+			}
+		}
+	}
+	
 
 	lcd_clear();
 	lcd_string(" All Alarms Saved");
@@ -639,56 +713,12 @@ void set_alarms() {
 	lcd_clear();
 }
 
-void touch(void) __interrupt(2) {
-	EX1 = 0;
-	touch_sensor = 1;
-	EX1 = 1;
-}
-
-void check_alarms(unsigned char h, unsigned char m, unsigned char s) {
-	unsigned char i, j, k;
-
-	for (i = 0; i < NUM_ALARMS; i++) {
-		if (h == alarm_hours[i] && m == alarm_minutes[i] && s < 2) {
-			lcd_clear();
-			lcd_goto(0, 0);
-			lcd_string(" Alarm ");
-			lcd_char('1' + i);  // Optional: Show which alarm triggered
-			lcd_goto(1, 0);
-			lcd_string("Take Medicine");
-			BUZZER = 1;
-			k = ds1307_read_ram(0x3F);
-			k = k+1;
-			ds1307_write_ram(0x3F, j);
-			for(j = 0; j < STEPS; j++) {
-				step_motor(j);
-				delay_ms(3);  // Adjust delay for speed
-			}
-			IN1=0;
-			IN2=0;
-			IN3=0;
-			IN4=0; // to save power
-
-			// Wait for user to acknowledge (e.g., press a button)
-			unsigned int timeout = 0;
-			while (down && timeout < 5000) {  // ~5 sec timeout
-				delay_ms(1);
-				timeout++;
-			}
-
-			lcd_clear();
-			BUZZER = 0;
-			break;  // Prevent multiple alarms triggering at once
-		}
-	}
-}
-
 void reset_motor_position(void) {
 	unsigned char count;
 	unsigned int total_steps, correction_steps, remainder, ii;
 
 	// 1. Read the counter value
-	count = ds1307_read_ram(0x3F);
+	count = read_eeprom(0x003F);
 
 	// 2. Calculate how far we've moved
 	total_steps = (unsigned long)count * 137;
@@ -712,85 +742,134 @@ void reset_motor_position(void) {
 	}
 
 	// 6. Reset counter in DS1307 RAM
-	ds1307_write_ram(0x3F, 0);
+	write_eeprom(0x003F, 0);
 }
 
+void alarm_triggered(void) __interrupt(0) {
+	EA = 0;
+	unsigned char j, k;
+	wake_flag = 1;
+	lcd_clear();
+	lcd_goto(0, 0);
+	lcd_string(" Alarm Triggered");
+	lcd_goto(1, 0);
+	lcd_string("Take Medicine");
+	BUZZER = 1;
+	k = read_eeprom(0x003F);
+	k = k+1;
+	write_eeprom(0x003F, k);
+	for(j = 0; j < STEPS; j++) {
+		step_motor(j);
+		delay_ms(3);  // Adjust delay for speed
+	}
+	IN1=0;
+	IN2=0;
+	IN3=0;
+	IN4=0; // to save power
+	// Wait for user to acknowledge (e.g., press a button)
+	unsigned int timeout = 0;
+	while (down && timeout < 5000) {  // ~5 sec timeout
+		delay_ms(1);
+		timeout++;
+	}
+	lcd_clear();
+	BUZZER = 0;
+	unsigned char alarm_indx = read_eeprom(0x003A);
+	alarm_indx = (alarm_indx+1)%num_alarms;
+	write_eeprom(0x003A, alarm_indx);
+	hr = read_eeprom(EEPROM_BASE + ((alarm_indx) * 2) + 1);
+	min  = read_eeprom(EEPROM_BASE + ((alarm_indx) * 2) + 2);
+	ds3232_set_alarm1(hr, min, 0);
+	EA = 1;
+}
+
+void configuration(void) __interrupt(2) {
+	EA = 0;
+	wake_flag = 1;
+	lcd_clear();
+	lcd_goto(1,0);
+	lcd_string(" Edit Mode");
+	delay(30000);
+	lcd_clear();
+	lcd_string(" <- to set ALARM");
+	lcd_goto(1,1);
+	lcd_string(" -> to set Clock");
+	idle_counter = 0;
+	while(next && back){
+		if(++idle_counter>1000){
+			lcd_clear();
+			return;
+		}
+		delay(500);
+	}
+	lcd_clear();
+	if(!next){
+		set_clock();
+	}
+	else if(!back){
+		set_alarms();
+	}
+	EA = 1;
+}
 
 void main() {
 	EA  = 1;   // Enable global interrupts
 	EX0 = 1;   // Enable INT0 (P3.2)
-	IT0 = 1;   // Set INT0 to edge-triggered
+	IT0 = 0;   // Set INT0 to level-triggered
 	EX1 = 1;   // Enable INT1 (P3.3)
-	IT1 = 1;   // Set INT1 to edge-triggered
+	IT1 = 0;   // Set INT1 to level-triggered
+	IP |= 0x04;
 
-	lcd_init();  // initialize lcd
-	i2c_init();  // initialize i2c communication prototcol
-	ds1307_init();  //initialize ds1307 rtc
-	num_alarms = ds1307_read_ram(0x08);
-	load_alarms_from_ds1307(num_alarms);
 	BUZZER = 0;
 
+	// Initialize peripherals
+	lcd_init();     // LCD init
+	i2c_init();     // I2C init
+	ds3232_init();  // DS3232 RTC init
+
 	unsigned char checker[4];
-	checker[0] = ds1307_read_ram(0x3B);
-	checker[1] = ds1307_read_ram(0x3C);
-	checker[2] = ds1307_read_ram(0x3D);
-	checker[3] = ds1307_read_ram(0x3E);
-
-	if(!(checker[0] == 'I' && checker[1] == 'N' && checker[2] == 'I' && checker[3] == 'T')) {
-		ds1307_write_ram(0x3B, 'I');
-		ds1307_write_ram(0x3C, 'N');
-		ds1307_write_ram(0x3D, 'I');
-		ds1307_write_ram(0x3E, 'T');
-		ds1307_write_ram(0x3F, 0x0);
+	checker[0] = read_eeprom(0x003B);
+	checker[1] = read_eeprom(0x003C);
+	checker[2] = read_eeprom(0x003D);
+	checker[3] = read_eeprom(0x003E);
+	if(!(checker[0] == 'I' && checker[1] == 'N' && checker[2] == 'I' && checker[3] == 'T')){
+		lcd_clear();
+		write_eeprom(0x003B, 'I');
+		write_eeprom(0x003C, 'N');
+		write_eeprom(0x003D, 'I');
+		write_eeprom(0x003E, 'T');
+		write_eeprom(0x003F, 0x0);
+		write_eeprom(0x003A, 0x0);
+		set_alarms();
+		lcd_clear();
+		lcd_goto(0,0);
+		lcd_string(" NOW INIT");
+		delay(30000);
+		lcd_clear();
 	}
 
-
-	while (1) {
-
-		if (!RESET) {
-			reset_motor_position();
-		}
-
-		// Normal mode
-		if (!edit_mode && !touch_sensor) {
-			ds1307_get_time_date(&h, &m, &s, &day, &d, &mo, &y);
-			// Alarm check
-			check_alarms(h, m, s);
-		}
-
-		// Clock edit mode
-		else if (edit_mode) {
-			lcd_clear();
-			lcd_goto(0,0);
-			lcd_string(" -> to set clock");
-			lcd_goto(1,0);
-			lcd_string(" <- to set alarm");
-            while(next && back);
-			lcd_clear();
-			lcd_goto(0,0);
-			if (!next) {
-				delay(10000);
-				set_clock();
-			}
-			else if (!back) {
-				delay(10000);
-				set_alarms();
-			}
-			edit_mode = 0;
-		}
-
-		else if(touch_sensor) {
-			idle_counter = 0;
-			while(++idle_counter < 1000) {
-				ds1307_get_time_date(&h, &m, &s, &day, &d, &mo, &y);
-				display(h, m, s, d, mo, y, day);
-
-				// Alarm check
-				check_alarms(h, m, s);
-			}
-			touch_sensor = 0;
-		}
-
+	else{
+		lcd_clear();
+		lcd_goto(0,0);
+		lcd_string(" PREV INIT");
+		delay(30000);
+		lcd_clear();
 	}
+
+	num_alarms = read_eeprom(EEPROM_BASE);
+	
+	while(1){
+		delay(1000);
+		PCON |= 0x02;
+		if (wake_flag) {
+            wake_flag = 0;
+            i2c_init();       // reinit
+            lcd_init();
+            ds3232_init();
+            lcd_clear();
+            lcd_string("Alarm Wakeup");
+            delay(2000);
+        }
+	}
+	
 }
-
