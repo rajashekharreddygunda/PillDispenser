@@ -4,13 +4,13 @@
 
 #define DS3232_ADDRESS 0x68 // address of rtc
 
-#define AT24C512B_ADDRESS 0X50 // address of eeprom
+#define AT24C512B_ADDRESS 0X57 // address of eeprom
 
 #define NUM_ALARMS 8 // maximum number of alarms 
 
 #define EEPROM_BASE 0x0000  // 24lc32a RAM starts at 0x00
 
-#define STEPS 137 // number of steps for stepper motor [48byj-28] to rotate 12 degrees
+#define STEPS 546 // number of steps for stepper motor [48byj-28] to rotate 48 degrees
 
 
 unsigned char __idata alarm_hours[NUM_ALARMS];  //to store alarm hours
@@ -30,7 +30,6 @@ char date_str[13];
 char buf[3];
 unsigned char hr, min;
 
-__bit wake_flag = 0;
 
 //lcd connections
 SBIT(LCD_RS, 0x90, 0);
@@ -41,8 +40,6 @@ SBIT(LCD_D5, 0x90, 4);
 SBIT(LCD_D6, 0x90, 5);
 SBIT(LCD_D7, 0x90, 6);
 
-//reset connection
-SBIT(RESET, 0x90, 7);
 
 //Button connections
 SBIT(up, 0xB0, 4);
@@ -55,13 +52,15 @@ SBIT(SDA, 0xB0, 1);
 SBIT(SCL, 0xB0, 0);
 
 //Stepper motor connections [via uln2003]
-SBIT(IN1, 0xA0, 1);
-SBIT(IN2, 0xA0, 2);
-SBIT(IN3, 0xA0, 3);
-SBIT(IN4, 0xA0, 4);
+SBIT(IN1, 0xA0, 4);
+SBIT(IN2, 0xA0, 3);
+SBIT(IN3, 0xA0, 2);
+SBIT(IN4, 0xA0, 1);
 
 //Buzzer connection
 SBIT(BUZZER, 0XA0, 0);
+
+SBIT(POWER_PULSE, 0xA0, 7);
 
 void delay(unsigned int cycles) {
 	unsigned int i, j;
@@ -77,9 +76,9 @@ void delay_ms(unsigned int ms) {
 
 void pulse_enable() {
 	LCD_EN = 1;
-	delay(1);
+	delay(50);
 	LCD_EN = 0;
-	delay(1);
+	delay(50);
 }
 
 void send_nibble(unsigned char nibble) {
@@ -95,7 +94,7 @@ void lcd_cmd(unsigned char cmd) {
 	LCD_RW = 0;
 	send_nibble(cmd >> 4);
 	send_nibble(cmd & 0x0F);
-	delay(2);
+	delay(50);
 }
 
 void lcd_char(unsigned char ch) {
@@ -103,7 +102,7 @@ void lcd_char(unsigned char ch) {
 	LCD_RW = 0;
 	send_nibble(ch >> 4);
 	send_nibble(ch & 0x0F);
-	delay(2);
+	delay(50);
 }
 
 void lcd_string(char *str) {
@@ -114,7 +113,7 @@ void lcd_string(char *str) {
 
 void lcd_clear() {
 	lcd_cmd(0x01);
-	delay(2);
+	delay(50);
 }
 
 void lcd_goto(unsigned char row, unsigned char col) {
@@ -190,7 +189,7 @@ __bit i2c_write(unsigned char value) {
 	delay(1);
 	ack = SDA;
 	SCL = 0;
-	return ~ack;
+	return !ack;
 }
 
 unsigned char i2c_read(unsigned char ack) {
@@ -404,7 +403,7 @@ void write_eeprom(unsigned int addr, unsigned char value) {
 	i2c_write(addr & 0xFF);				  			  // lower byte RAM address
 	i2c_write(value);                      // Data
 	i2c_stop();
-	delay(500);
+	delay(5000);
 }
 
 unsigned char read_eeprom(unsigned int addr) {
@@ -421,7 +420,6 @@ unsigned char read_eeprom(unsigned int addr) {
 	i2c_write((AT24C512B_ADDRESS << 1) | 1);  // Read mode
 	data = i2c_read(0);                    // No ACK
 	i2c_stop();
-	delay(500);
 	return data;
 }
 
@@ -482,7 +480,7 @@ void ds3232_set_alarm1(unsigned char hrs, unsigned char min, unsigned char sec) 
     i2c_write(bcd_sec & 0x7F);      // A1 Seconds, A1M1 = 0
     i2c_write(bcd_min & 0x7F);      // A1 Minutes, A1M2 = 0
     i2c_write(bcd_hrs & 0x7F);      // A1 Hours, A1M3 = 0
-    i2c_write(0x80);                // A1 Day/Date, A1M4 = 1 (don’t care about day/date)
+    i2c_write(0x80);                // A1 Day/Date, A1M4 = 1 (donÃ¢â‚¬â„¢t care about day/date)
     i2c_stop();
 
     // Enable Alarm1 interrupt, INTCN = 1
@@ -688,9 +686,9 @@ void set_alarms() {
 		write_alarm_to_eeprom(i, alarm_hours[i], alarm_minutes[i]);
 	}
 	ds3232_get_time_date(&h, &m, &s, &day, &d, &mo, &y);
-	int total_mins = (h*60)+min;
+	int total_mins = (h*60)+m;
 
-	if (total_mins >= (alarm_hours[num_alarms - 1] * 60 + alarm_minutes[num_alarms - 1])) {
+	if ((total_mins >= (alarm_hours[num_alarms - 1] * 60 + alarm_minutes[num_alarms - 1])) || (total_mins < (alarm_hours[0]*60 + alarm_minutes[0]))) {
     	ds3232_set_alarm1(alarm_hours[0], alarm_minutes[0], 0);
     	write_eeprom(0x003A, 0);
 	}
@@ -713,42 +711,43 @@ void set_alarms() {
 	lcd_clear();
 }
 
-void reset_motor_position(void) {
-	unsigned char count;
-	unsigned int total_steps, correction_steps, remainder, ii;
-
-	// 1. Read the counter value
-	count = read_eeprom(0x003F);
-
-	// 2. Calculate how far we've moved
-	total_steps = (unsigned long)count * 137;
-
-	// 3. Get how far into the current full rotation we are
-	remainder = total_steps % 4096;
-
-	// 4. Calculate steps needed to return to zero
-	if (remainder != 0) {
-		correction_steps = 4096 - remainder;
-
-		// 5. Rotate the motor back
-		for(ii=0; ii<correction_steps; ii++) {
-			step_motor(ii);
-			delay_ms(3);
-		}
-		IN1 = 0;
-		IN2 = 0;
-		IN3 = 0;
-		IN4 = 0;
-	}
-
-	// 6. Reset counter in DS1307 RAM
-	write_eeprom(0x003F, 0);
-}
+//void reset_motor_position(void) {
+//	unsigned char count;
+//	unsigned int total_steps, correction_steps, remainder, ii;
+//
+//	// 1. Read the counter value
+//	count = read_eeprom(0x003F);
+//
+//	// 2. Calculate how far we've moved
+//	total_steps = (unsigned long)count * 137;
+//
+//	// 3. Get how far into the current full rotation we are
+//	remainder = total_steps % 4096;
+//
+//	// 4. Calculate steps needed to return to zero
+//	if (remainder != 0) {
+//		correction_steps = 4096 - remainder;
+//
+//		// 5. Rotate the motor back
+//		for(ii=0; ii<correction_steps; ii++) {
+//			step_motor(ii);
+//			delay_ms(3);
+//		}
+//		IN1 = 0;
+//		IN2 = 0;
+//		IN3 = 0;
+//		IN4 = 0;
+//	}
+//
+//	// 6. Reset counter in DS1307 RAM
+//	write_eeprom(0x003F, 0);
+//}
 
 void alarm_triggered(void) __interrupt(0) {
 	EA = 0;
+	POWER_PULSE = 1;
+	lcd_init();
 	unsigned char j, k;
-	wake_flag = 1;
 	lcd_clear();
 	lcd_goto(0, 0);
 	lcd_string(" Alarm Triggered");
@@ -780,47 +779,75 @@ void alarm_triggered(void) __interrupt(0) {
 	hr = read_eeprom(EEPROM_BASE + ((alarm_indx) * 2) + 1);
 	min  = read_eeprom(EEPROM_BASE + ((alarm_indx) * 2) + 2);
 	ds3232_set_alarm1(hr, min, 0);
+	POWER_PULSE = 0;
 	EA = 1;
 }
 
 void configuration(void) __interrupt(2) {
-	EA = 0;
-	wake_flag = 1;
-	lcd_clear();
-	lcd_goto(1,0);
-	lcd_string(" Edit Mode");
-	delay(30000);
-	lcd_clear();
-	lcd_string(" <- to set ALARM");
-	lcd_goto(1,1);
-	lcd_string(" -> to set Clock");
-	idle_counter = 0;
+    EA = 0;
+	POWER_PULSE = 1;
+	lcd_init();
+    lcd_clear();
+    lcd_goto(0,0);
+    lcd_string(" <- to see TIME");
+    lcd_goto(1,1);
+    lcd_string("-> to CONFIGURE");
+    idle_counter = 0;
 	while(next && back){
 		if(++idle_counter>1000){
 			lcd_clear();
+			idle_counter = 0;
 			return;
 		}
 		delay(500);
 	}
 	lcd_clear();
 	if(!next){
-		set_clock();
+		lcd_clear();
+	    lcd_goto(1,0);
+	    lcd_string(" Edit Mode");
+	    delay(30000);
+	    lcd_clear();
+	    lcd_string(" <- to set ALARM");
+	    lcd_goto(1,1);
+	    lcd_string(" -> to set Clock");
+	    idle_counter = 0;
+	    while(next && back){
+	    	if(++idle_counter>1000){
+	    		lcd_clear();
+	    		return;
+	    	}
+	    	delay(500);
+	    }
+	    lcd_clear();
+	    if(!next){
+	    	set_clock();
+	    }
+	    else if(!back){
+	    	set_alarms();
+	    }
 	}
 	else if(!back){
-		set_alarms();
+		idle_counter = 0;
+		while(++idle_counter<1000){
+		    ds3232_get_time_date(&h, &m, &s, &day, &d, &mo, &y);
+		    display(h, m, s, d, mo, y, day);
+		}
 	}
+	POWER_PULSE = 0;
 	EA = 1;
 }
 
 void main() {
 	EA  = 1;   // Enable global interrupts
 	EX0 = 1;   // Enable INT0 (P3.2)
-	IT0 = 0;   // Set INT0 to level-triggered
+	IT0 = 1;   // Set INT0 to level-triggered
 	EX1 = 1;   // Enable INT1 (P3.3)
-	IT1 = 0;   // Set INT1 to level-triggered
+	IT1 = 1;   // Set INT1 to level-triggered
 	IP |= 0x04;
 
 	BUZZER = 0;
+	POWER_PULSE = 1;
 
 	// Initialize peripherals
 	lcd_init();     // LCD init
@@ -834,13 +861,15 @@ void main() {
 	checker[3] = read_eeprom(0x003E);
 	if(!(checker[0] == 'I' && checker[1] == 'N' && checker[2] == 'I' && checker[3] == 'T')){
 		lcd_clear();
+		set_alarms();
+		lcd_init();
+		lcd_cmd(0x80);
 		write_eeprom(0x003B, 'I');
 		write_eeprom(0x003C, 'N');
 		write_eeprom(0x003D, 'I');
 		write_eeprom(0x003E, 'T');
 		write_eeprom(0x003F, 0x0);
 		write_eeprom(0x003A, 0x0);
-		set_alarms();
 		lcd_clear();
 		lcd_goto(0,0);
 		lcd_string(" NOW INIT");
@@ -855,21 +884,9 @@ void main() {
 		delay(30000);
 		lcd_clear();
 	}
-
-	num_alarms = read_eeprom(EEPROM_BASE);
-	
+	POWER_PULSE = 0;
+	PCON |= 0x02;
 	while(1){
-		delay(1000);
 		PCON |= 0x02;
-		if (wake_flag) {
-            wake_flag = 0;
-            i2c_init();       // reinit
-            lcd_init();
-            ds3232_init();
-            lcd_clear();
-            lcd_string("Alarm Wakeup");
-            delay(2000);
-        }
 	}
-	
 }
