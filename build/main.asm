@@ -8,23 +8,24 @@
 ;--------------------------------------------------------
 ; Public variables in this module
 ;--------------------------------------------------------
+	.globl _alarm_arranger_PARM_3
+	.globl _alarm_arranger_PARM_2
 	.globl _int_to_str_PARM_2
 	.globl _main
-	.globl _reset_motor_position
-	.globl _check_alarms
-	.globl _touch
+	.globl _configuration
+	.globl _alarm_triggered
 	.globl _set_alarms
 	.globl _set_clock
-	.globl _load_alarms_from_ds1307
-	.globl _write_alarm_to_ds1307
-	.globl _ds1307_read_ram
-	.globl _ds1307_write_ram
-	.globl _Settings
+	.globl _ds3232_set_alarm1
+	.globl _alarm_arranger
+	.globl _write_alarm_to_eeprom
+	.globl _read_eeprom
+	.globl _write_eeprom
 	.globl _step_motor
 	.globl _display
-	.globl _ds1307_get_time_date
-	.globl _ds1307_set_time_date
-	.globl _ds1307_init
+	.globl _ds3232_get_time_date
+	.globl _ds3232_set_time_date
+	.globl _ds3232_init
 	.globl _bcd_to_dec
 	.globl _dec_to_bcd
 	.globl _i2c_read
@@ -43,6 +44,7 @@
 	.globl _pulse_enable
 	.globl _delay_ms
 	.globl _delay
+	.globl _POWER_PULSE
 	.globl _BUZZER
 	.globl _IN4
 	.globl _IN3
@@ -54,9 +56,6 @@
 	.globl _next
 	.globl _down
 	.globl _up
-	.globl _alarm
-	.globl _clock
-	.globl _RESET
 	.globl _LCD_D7
 	.globl _LCD_D6
 	.globl _LCD_D5
@@ -187,39 +186,34 @@
 	.globl _DPL
 	.globl _SP
 	.globl _P0
-	.globl _alarm_check
-	.globl _clock_check
-	.globl _touch_sensor
-	.globl _edit_mode
 	.globl _min_vals
 	.globl _max_vals
 	.globl _alarm_minutes
 	.globl _alarm_hours
-	.globl _check_alarms_PARM_3
-	.globl _check_alarms_PARM_2
-	.globl _write_alarm_to_ds1307_PARM_3
-	.globl _write_alarm_to_ds1307_PARM_2
-	.globl _ds1307_write_ram_PARM_2
+	.globl _ds3232_set_alarm1_PARM_3
+	.globl _ds3232_set_alarm1_PARM_2
+	.globl _write_alarm_to_eeprom_PARM_3
+	.globl _write_alarm_to_eeprom_PARM_2
+	.globl _write_eeprom_PARM_2
 	.globl _display_PARM_7
 	.globl _display_PARM_6
 	.globl _display_PARM_5
 	.globl _display_PARM_4
 	.globl _display_PARM_3
 	.globl _display_PARM_2
-	.globl _ds1307_get_time_date_PARM_7
-	.globl _ds1307_get_time_date_PARM_6
-	.globl _ds1307_get_time_date_PARM_5
-	.globl _ds1307_get_time_date_PARM_4
-	.globl _ds1307_get_time_date_PARM_3
-	.globl _ds1307_get_time_date_PARM_2
-	.globl _ds1307_set_time_date_PARM_7
-	.globl _ds1307_set_time_date_PARM_6
-	.globl _ds1307_set_time_date_PARM_5
-	.globl _ds1307_set_time_date_PARM_4
-	.globl _ds1307_set_time_date_PARM_3
-	.globl _ds1307_set_time_date_PARM_2
+	.globl _ds3232_get_time_date_PARM_7
+	.globl _ds3232_get_time_date_PARM_6
+	.globl _ds3232_get_time_date_PARM_5
+	.globl _ds3232_get_time_date_PARM_4
+	.globl _ds3232_get_time_date_PARM_3
+	.globl _ds3232_get_time_date_PARM_2
+	.globl _ds3232_set_time_date_PARM_7
+	.globl _ds3232_set_time_date_PARM_6
+	.globl _ds3232_set_time_date_PARM_5
+	.globl _ds3232_set_time_date_PARM_4
+	.globl _ds3232_set_time_date_PARM_3
+	.globl _ds3232_set_time_date_PARM_2
 	.globl _lcd_goto_PARM_2
-	.globl _count_down
 	.globl _min
 	.globl _hr
 	.globl _buf
@@ -237,7 +231,6 @@
 	.globl _idle_counter
 	.globl _num_alarms
 	.globl _time_date
-	.globl _dummy
 ;--------------------------------------------------------
 ; special function registers
 ;--------------------------------------------------------
@@ -378,31 +371,41 @@ _LCD_D4	=	0x0093
 _LCD_D5	=	0x0094
 _LCD_D6	=	0x0095
 _LCD_D7	=	0x0096
-_RESET	=	0x0097
-_clock	=	0x00b2
-_alarm	=	0x00b3
 _up	=	0x00b4
 _down	=	0x00b5
 _next	=	0x00b6
 _back	=	0x00b7
 _SDA	=	0x00b1
 _SCL	=	0x00b0
-_IN1	=	0x00a1
-_IN2	=	0x00a2
-_IN3	=	0x00a3
-_IN4	=	0x00a4
+_IN1	=	0x00a4
+_IN2	=	0x00a3
+_IN3	=	0x00a2
+_IN4	=	0x00a1
 _BUZZER	=	0x00a0
+_POWER_PULSE	=	0x00a7
 ;--------------------------------------------------------
 ; overlayable register banks
 ;--------------------------------------------------------
 	.area REG_BANK_0	(REL,OVR,DATA)
 	.ds 8
 ;--------------------------------------------------------
+; overlayable bit register bank
+;--------------------------------------------------------
+	.area BIT_BANK	(REL,OVR,DATA)
+bits:
+	.ds 1
+	b0 = bits[0]
+	b1 = bits[1]
+	b2 = bits[2]
+	b3 = bits[3]
+	b4 = bits[4]
+	b5 = bits[5]
+	b6 = bits[6]
+	b7 = bits[7]
+;--------------------------------------------------------
 ; internal ram data
 ;--------------------------------------------------------
 	.area DSEG    (DATA)
-_dummy::
-	.ds 1
 _time_date::
 	.ds 7
 _num_alarms::
@@ -437,33 +440,31 @@ _hr::
 	.ds 1
 _min::
 	.ds 1
-_count_down::
-	.ds 2
 _lcd_goto_PARM_2:
 	.ds 1
-_ds1307_set_time_date_PARM_2:
+_ds3232_set_time_date_PARM_2:
 	.ds 1
-_ds1307_set_time_date_PARM_3:
+_ds3232_set_time_date_PARM_3:
 	.ds 1
-_ds1307_set_time_date_PARM_4:
+_ds3232_set_time_date_PARM_4:
 	.ds 1
-_ds1307_set_time_date_PARM_5:
+_ds3232_set_time_date_PARM_5:
 	.ds 1
-_ds1307_set_time_date_PARM_6:
+_ds3232_set_time_date_PARM_6:
 	.ds 1
-_ds1307_set_time_date_PARM_7:
+_ds3232_set_time_date_PARM_7:
 	.ds 1
-_ds1307_get_time_date_PARM_2:
+_ds3232_get_time_date_PARM_2:
 	.ds 3
-_ds1307_get_time_date_PARM_3:
+_ds3232_get_time_date_PARM_3:
 	.ds 3
-_ds1307_get_time_date_PARM_4:
+_ds3232_get_time_date_PARM_4:
 	.ds 3
-_ds1307_get_time_date_PARM_5:
+_ds3232_get_time_date_PARM_5:
 	.ds 3
-_ds1307_get_time_date_PARM_6:
+_ds3232_get_time_date_PARM_6:
 	.ds 3
-_ds1307_get_time_date_PARM_7:
+_ds3232_get_time_date_PARM_7:
 	.ds 3
 _display_PARM_2:
 	.ds 1
@@ -477,19 +478,23 @@ _display_PARM_6:
 	.ds 1
 _display_PARM_7:
 	.ds 1
-_ds1307_write_ram_PARM_2:
+_write_eeprom_PARM_2:
 	.ds 1
-_write_alarm_to_ds1307_PARM_2:
+_write_alarm_to_eeprom_PARM_2:
 	.ds 1
-_write_alarm_to_ds1307_PARM_3:
+_write_alarm_to_eeprom_PARM_3:
 	.ds 1
-_check_alarms_PARM_2:
+_ds3232_set_alarm1_PARM_2:
 	.ds 1
-_check_alarms_PARM_3:
+_ds3232_set_alarm1_PARM_3:
 	.ds 1
-_check_alarms_j_10000_125:
-	.ds 1
-_main_checker_10001_141:
+_set_alarms_total_mins_10002_135:
+	.ds 2
+_set_alarms_total_mins1_50002_140:
+	.ds 2
+_set_alarms_sloc0_1_0:
+	.ds 2
+_main_checker_10001_169:
 	.ds 4
 ;--------------------------------------------------------
 ; overlayable items in internal ram
@@ -501,6 +506,25 @@ _int_to_str_PARM_2:
 	.ds 3
 	.area	OSEG    (OVR,DATA)
 	.area	OSEG    (OVR,DATA)
+	.area	OSEG    (OVR,DATA)
+_alarm_arranger_PARM_2:
+	.ds 3
+_alarm_arranger_PARM_3:
+	.ds 3
+_alarm_arranger_hours_10000_63:
+	.ds 3
+_alarm_arranger_i_10000_64:
+	.ds 1
+_alarm_arranger_min_idx_10000_64:
+	.ds 1
+_alarm_arranger_temp_30001_71:
+	.ds 2
+_alarm_arranger___index_10001_72:
+	.ds 2
+_alarm_arranger_sloc0_1_0:
+	.ds 1
+_alarm_arranger_sloc1_1_0:
+	.ds 3
 ;--------------------------------------------------------
 ; Stack segment in internal ram
 ;--------------------------------------------------------
@@ -529,13 +553,7 @@ _min_vals::
 ; bit data
 ;--------------------------------------------------------
 	.area BSEG    (BIT)
-_edit_mode::
-	.ds 1
-_touch_sensor::
-	.ds 1
-_clock_check::
-	.ds 1
-_alarm_check::
+_i2c_write_ack_10000_29:
 	.ds 1
 _i2c_read_sloc0_1_0:
 	.ds 1
@@ -571,11 +589,11 @@ _i2c_read_sloc0_1_0:
 	.area HOME    (CODE)
 __interrupt_vect:
 	ljmp	__sdcc_gsinit_startup
-	ljmp	_Settings
+	ljmp	_alarm_triggered
 	.ds	5
 	reti
 	.ds	7
-	ljmp	_touch
+	ljmp	_configuration
 ; restartable atomic support routines
 	.ds	2
 sdcc_atomic_exchange_rollback_start::
@@ -647,7 +665,7 @@ sdcc_atomic_compare_exchange_gptr_impl::
 	.globl __mcs51_genXINIT
 	.globl __mcs51_genXRAMCLEAR
 	.globl __mcs51_genRAMCLEAR
-;	main.c:21: unsigned char time_date[7] = {0,0,0,0,1,1,25};  //starting time
+;	main.c:19: unsigned char time_date[7] = {0,0,0,0,1,1,25};  //starting time
 	mov	_time_date,#0x00
 	mov	(_time_date + 0x0001),#0x00
 	mov	(_time_date + 0x0002),#0x00
@@ -655,13 +673,13 @@ sdcc_atomic_compare_exchange_gptr_impl::
 	mov	(_time_date + 0x0004),#0x01
 	mov	(_time_date + 0x0005),#0x01
 	mov	(_time_date + 0x0006),#0x19
-;	main.c:23: unsigned char num_alarms = 1;
+;	main.c:21: unsigned char num_alarms = 1;
 	mov	_num_alarms,#0x01
-;	main.c:24: unsigned int idle_counter = 0;
+;	main.c:22: unsigned int idle_counter = 0;
 	clr	a
 	mov	_idle_counter,a
 	mov	(_idle_counter + 1),a
-;	main.c:27: const unsigned char __idata max_vals[] = {24, 60, 60, 7, 31, 12, 100};
+;	main.c:25: const unsigned char __idata max_vals[] = {24, 60, 60, 7, 31, 12, 100};
 	mov	r0,#_max_vals
 	mov	@r0,#0x18
 	mov	r0,#(_max_vals + 0x0001)
@@ -676,7 +694,7 @@ sdcc_atomic_compare_exchange_gptr_impl::
 	mov	@r0,#0x0c
 	mov	r0,#(_max_vals + 0x0006)
 	mov	@r0,#0x64
-;	main.c:28: const unsigned char __idata min_vals[] = {0, 0, 0, 0, 1, 1, 0};
+;	main.c:26: const unsigned char __idata min_vals[] = {0, 0, 0, 0, 1, 1, 0};
 	mov	r0,#_min_vals
 	mov	@r0,#0x00
 	mov	r0,#(_min_vals + 0x0001)
@@ -691,18 +709,6 @@ sdcc_atomic_compare_exchange_gptr_impl::
 	mov	@r0,#0x01
 	mov	r0,#(_min_vals + 0x0006)
 	mov	@r0,#0x00
-;	main.c:15: volatile __bit edit_mode = 0;  // Global flag to enter clock-edit mode
-;	assignBit
-	clr	_edit_mode
-;	main.c:16: volatile __bit touch_sensor = 0;  // global flag to enter alarm settings
-;	assignBit
-	clr	_touch_sensor
-;	main.c:34: volatile __bit clock_check = 0;
-;	assignBit
-	clr	_clock_check
-;	main.c:35: volatile __bit alarm_check = 0;
-;	assignBit
-	clr	_alarm_check
 	.area GSFINAL (CODE)
 	ljmp	__sdcc_program_startup
 ;--------------------------------------------------------
@@ -724,7 +730,7 @@ __sdcc_program_startup:
 ;i             Allocated to registers r4 r5 
 ;j             Allocated to registers r2 r3 
 ;------------------------------------------------------------
-;	main.c:71: void delay(unsigned int cycles) {
+;	main.c:65: void delay(unsigned int cycles) {
 ;	-----------------------------------------
 ;	 function delay
 ;	-----------------------------------------
@@ -739,7 +745,7 @@ _delay:
 	ar0 = 0x00
 	mov	r6, dpl
 	mov	r7, dph
-;	main.c:73: for(i = 0; i < cycles; i++)
+;	main.c:67: for(i = 0; i < cycles; i++)
 	mov	r4,#0x00
 	mov	r5,#0x00
 00107$:
@@ -749,7 +755,7 @@ _delay:
 	mov	a,r5
 	subb	a,r7
 	jnc	00109$
-;	main.c:74: for(j = 0; j < 5; j++);
+;	main.c:68: for(j = 0; j < 5; j++);
 	mov	r2,#0x05
 	mov	r3,#0x00
 00105$:
@@ -760,13 +766,13 @@ _delay:
 	mov	a,r2
 	orl	a,r3
 	jnz	00105$
-;	main.c:73: for(i = 0; i < cycles; i++)
+;	main.c:67: for(i = 0; i < cycles; i++)
 	inc	r4
 	cjne	r4,#0x00,00107$
 	inc	r5
 	sjmp	00107$
 00109$:
-;	main.c:75: }
+;	main.c:69: }
 	ret
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'delay_ms'
@@ -775,14 +781,14 @@ _delay:
 ;i             Allocated to registers r4 r5 
 ;j             Allocated to registers r2 r3 
 ;------------------------------------------------------------
-;	main.c:77: void delay_ms(unsigned int ms) {
+;	main.c:71: void delay_ms(unsigned int ms) {
 ;	-----------------------------------------
 ;	 function delay_ms
 ;	-----------------------------------------
 _delay_ms:
 	mov	r6, dpl
 	mov	r7, dph
-;	main.c:79: for(i=0; i<ms; i++)
+;	main.c:73: for(i=0; i<ms; i++)
 	mov	r4,#0x00
 	mov	r5,#0x00
 00107$:
@@ -792,7 +798,7 @@ _delay_ms:
 	mov	a,r5
 	subb	a,r7
 	jnc	00109$
-;	main.c:80: for(j=0; j<1275; j++);
+;	main.c:74: for(j=0; j<1275; j++);
 	mov	r2,#0xfb
 	mov	r3,#0x04
 00105$:
@@ -803,60 +809,60 @@ _delay_ms:
 	mov	a,r2
 	orl	a,r3
 	jnz	00105$
-;	main.c:79: for(i=0; i<ms; i++)
+;	main.c:73: for(i=0; i<ms; i++)
 	inc	r4
 	cjne	r4,#0x00,00107$
 	inc	r5
 	sjmp	00107$
 00109$:
-;	main.c:81: }
+;	main.c:75: }
 	ret
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'pulse_enable'
 ;------------------------------------------------------------
-;	main.c:83: void pulse_enable() {
+;	main.c:77: void pulse_enable() {
 ;	-----------------------------------------
 ;	 function pulse_enable
 ;	-----------------------------------------
 _pulse_enable:
-;	main.c:84: LCD_EN = 1;
+;	main.c:78: LCD_EN = 1;
 ;	assignBit
 	setb	_LCD_EN
-;	main.c:85: delay(1);
-	mov	dptr,#0x0001
+;	main.c:79: delay(50);
+	mov	dptr,#0x0032
 	lcall	_delay
-;	main.c:86: LCD_EN = 0;
+;	main.c:80: LCD_EN = 0;
 ;	assignBit
 	clr	_LCD_EN
-;	main.c:87: delay(1);
-	mov	dptr,#0x0001
-;	main.c:88: }
+;	main.c:81: delay(50);
+	mov	dptr,#0x0032
+;	main.c:82: }
 	ljmp	_delay
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'send_nibble'
 ;------------------------------------------------------------
 ;nibble        Allocated to registers r7 
 ;------------------------------------------------------------
-;	main.c:90: void send_nibble(unsigned char nibble) {
+;	main.c:84: void send_nibble(unsigned char nibble) {
 ;	-----------------------------------------
 ;	 function send_nibble
 ;	-----------------------------------------
 _send_nibble:
-;	main.c:91: LCD_D4 = (nibble >> 0) & 1;
+;	main.c:85: LCD_D4 = (nibble >> 0) & 1;
 	mov	a,dpl
 	mov	r7,a
 	anl	a,#0x01
 ;	assignBit
 	add	a,#0xff
 	mov	_LCD_D4,c
-;	main.c:92: LCD_D5 = (nibble >> 1) & 1;
+;	main.c:86: LCD_D5 = (nibble >> 1) & 1;
 	mov	a,r7
 	rr	a
 	anl	a,#0x01
 ;	assignBit
 	add	a,#0xff
 	mov	_LCD_D5,c
-;	main.c:93: LCD_D6 = (nibble >> 2) & 1;
+;	main.c:87: LCD_D6 = (nibble >> 2) & 1;
 	mov	a,r7
 	rr	a
 	rr	a
@@ -864,7 +870,7 @@ _send_nibble:
 ;	assignBit
 	add	a,#0xff
 	mov	_LCD_D6,c
-;	main.c:94: LCD_D7 = (nibble >> 3) & 1;
+;	main.c:88: LCD_D7 = (nibble >> 3) & 1;
 	mov	a,r7
 	mov	c,acc.3
 	clr	a
@@ -872,27 +878,27 @@ _send_nibble:
 ;	assignBit
 	add	a,#0xff
 	mov	_LCD_D7,c
-;	main.c:95: pulse_enable();
-;	main.c:96: }
+;	main.c:89: pulse_enable();
+;	main.c:90: }
 	ljmp	_pulse_enable
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'lcd_cmd'
 ;------------------------------------------------------------
 ;cmd           Allocated to registers r7 
 ;------------------------------------------------------------
-;	main.c:98: void lcd_cmd(unsigned char cmd) {
+;	main.c:92: void lcd_cmd(unsigned char cmd) {
 ;	-----------------------------------------
 ;	 function lcd_cmd
 ;	-----------------------------------------
 _lcd_cmd:
 	mov	r7, dpl
-;	main.c:99: LCD_RS = 0;
+;	main.c:93: LCD_RS = 0;
 ;	assignBit
 	clr	_LCD_RS
-;	main.c:100: LCD_RW = 0;
+;	main.c:94: LCD_RW = 0;
 ;	assignBit
 	clr	_LCD_RW
-;	main.c:101: send_nibble(cmd >> 4);
+;	main.c:95: send_nibble(cmd >> 4);
 	mov	a,r7
 	swap	a
 	anl	a,#0x0f
@@ -900,33 +906,33 @@ _lcd_cmd:
 	push	ar7
 	lcall	_send_nibble
 	pop	ar7
-;	main.c:102: send_nibble(cmd & 0x0F);
+;	main.c:96: send_nibble(cmd & 0x0F);
 	mov	a,#0x0f
 	anl	a,r7
 	mov	dpl,a
 	lcall	_send_nibble
-;	main.c:103: delay(2);
-	mov	dptr,#0x0002
-;	main.c:104: }
+;	main.c:97: delay(50);
+	mov	dptr,#0x0032
+;	main.c:98: }
 	ljmp	_delay
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'lcd_char'
 ;------------------------------------------------------------
 ;ch            Allocated to registers r7 
 ;------------------------------------------------------------
-;	main.c:106: void lcd_char(unsigned char ch) {
+;	main.c:100: void lcd_char(unsigned char ch) {
 ;	-----------------------------------------
 ;	 function lcd_char
 ;	-----------------------------------------
 _lcd_char:
 	mov	r7, dpl
-;	main.c:107: LCD_RS = 1;
+;	main.c:101: LCD_RS = 1;
 ;	assignBit
 	setb	_LCD_RS
-;	main.c:108: LCD_RW = 0;
+;	main.c:102: LCD_RW = 0;
 ;	assignBit
 	clr	_LCD_RW
-;	main.c:109: send_nibble(ch >> 4);
+;	main.c:103: send_nibble(ch >> 4);
 	mov	a,r7
 	swap	a
 	anl	a,#0x0f
@@ -934,21 +940,21 @@ _lcd_char:
 	push	ar7
 	lcall	_send_nibble
 	pop	ar7
-;	main.c:110: send_nibble(ch & 0x0F);
+;	main.c:104: send_nibble(ch & 0x0F);
 	mov	a,#0x0f
 	anl	a,r7
 	mov	dpl,a
 	lcall	_send_nibble
-;	main.c:111: delay(2);
-	mov	dptr,#0x0002
-;	main.c:112: }
+;	main.c:105: delay(50);
+	mov	dptr,#0x0032
+;	main.c:106: }
 	ljmp	_delay
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'lcd_string'
 ;------------------------------------------------------------
 ;str           Allocated to registers 
 ;------------------------------------------------------------
-;	main.c:114: void lcd_string(char *str) {
+;	main.c:108: void lcd_string(char *str) {
 ;	-----------------------------------------
 ;	 function lcd_string
 ;	-----------------------------------------
@@ -956,7 +962,7 @@ _lcd_string:
 	mov	r5, dpl
 	mov	r6, dph
 	mov	r7, b
-;	main.c:115: while(*str) {
+;	main.c:109: while(*str) {
 00101$:
 	mov	dpl,r5
 	mov	dph,r6
@@ -964,7 +970,7 @@ _lcd_string:
 	lcall	__gptrget
 	mov	r4,a
 	jz	00104$
-;	main.c:116: lcd_char(*str++);
+;	main.c:110: lcd_char(*str++);
 	mov	dpl,r4
 	inc	r5
 	cjne	r5,#0x00,00120$
@@ -979,22 +985,22 @@ _lcd_string:
 	pop	ar7
 	sjmp	00101$
 00104$:
-;	main.c:118: }
+;	main.c:112: }
 	ret
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'lcd_clear'
 ;------------------------------------------------------------
-;	main.c:120: void lcd_clear() {
+;	main.c:114: void lcd_clear() {
 ;	-----------------------------------------
 ;	 function lcd_clear
 ;	-----------------------------------------
 _lcd_clear:
-;	main.c:121: lcd_cmd(0x01);
+;	main.c:115: lcd_cmd(0x01);
 	mov	dpl, #0x01
 	lcall	_lcd_cmd
-;	main.c:122: delay(2);
-	mov	dptr,#0x0002
-;	main.c:123: }
+;	main.c:116: delay(50);
+	mov	dptr,#0x0032
+;	main.c:117: }
 	ljmp	_delay
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'lcd_goto'
@@ -1003,12 +1009,12 @@ _lcd_clear:
 ;row           Allocated to registers r7 
 ;address       Allocated to registers 
 ;------------------------------------------------------------
-;	main.c:125: void lcd_goto(unsigned char row, unsigned char col) {
+;	main.c:119: void lcd_goto(unsigned char row, unsigned char col) {
 ;	-----------------------------------------
 ;	 function lcd_goto
 ;	-----------------------------------------
 _lcd_goto:
-;	main.c:126: unsigned char address = (row == 0) ? (0x80 + col) : (0xC0 + col);
+;	main.c:120: unsigned char address = (row == 0) ? (0x80 + col) : (0xC0 + col);
 	mov	a,dpl
 	jnz	00103$
 	mov	r7,_lcd_goto_PARM_2
@@ -1023,65 +1029,65 @@ _lcd_goto:
 	mov	r7,a
 00104$:
 	mov	dpl,r7
-;	main.c:127: lcd_cmd(address);
-;	main.c:128: }
+;	main.c:121: lcd_cmd(address);
+;	main.c:122: }
 	ljmp	_lcd_cmd
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'lcd_init'
 ;------------------------------------------------------------
-;	main.c:131: void lcd_init() {
+;	main.c:124: void lcd_init() {
 ;	-----------------------------------------
 ;	 function lcd_init
 ;	-----------------------------------------
 _lcd_init:
-;	main.c:132: LCD_RS = 0;
+;	main.c:125: LCD_RS = 0;
 ;	assignBit
 	clr	_LCD_RS
-;	main.c:133: LCD_RW = 0;
+;	main.c:126: LCD_RW = 0;
 ;	assignBit
 	clr	_LCD_RW
-;	main.c:134: LCD_EN = 0;
+;	main.c:127: LCD_EN = 0;
 ;	assignBit
 	clr	_LCD_EN
-;	main.c:136: delay(20);
+;	main.c:129: delay(20);
 	mov	dptr,#0x0014
 	lcall	_delay
-;	main.c:138: send_nibble(0x03);
+;	main.c:131: send_nibble(0x03);
 	mov	dpl, #0x03
 	lcall	_send_nibble
-;	main.c:139: delay(5);
+;	main.c:132: delay(5);
 	mov	dptr,#0x0005
 	lcall	_delay
-;	main.c:140: send_nibble(0x03);
+;	main.c:133: send_nibble(0x03);
 	mov	dpl, #0x03
 	lcall	_send_nibble
-;	main.c:141: delay(5);
+;	main.c:134: delay(5);
 	mov	dptr,#0x0005
 	lcall	_delay
-;	main.c:142: send_nibble(0x03);
+;	main.c:135: send_nibble(0x03);
 	mov	dpl, #0x03
 	lcall	_send_nibble
-;	main.c:143: delay(5);
+;	main.c:136: delay(5);
 	mov	dptr,#0x0005
 	lcall	_delay
-;	main.c:144: send_nibble(0x02);
+;	main.c:137: send_nibble(0x02);
 	mov	dpl, #0x02
 	lcall	_send_nibble
-;	main.c:146: lcd_cmd(0x28);
+;	main.c:139: lcd_cmd(0x28);
 	mov	dpl, #0x28
 	lcall	_lcd_cmd
-;	main.c:147: lcd_cmd(0x0C);
+;	main.c:140: lcd_cmd(0x0C);
 	mov	dpl, #0x0c
 	lcall	_lcd_cmd
-;	main.c:148: lcd_cmd(0x06);
+;	main.c:141: lcd_cmd(0x06);
 	mov	dpl, #0x06
 	lcall	_lcd_cmd
-;	main.c:149: lcd_cmd(0x01);
+;	main.c:142: lcd_cmd(0x01);
 	mov	dpl, #0x01
 	lcall	_lcd_cmd
-;	main.c:150: delay(2);
+;	main.c:143: delay(2);
 	mov	dptr,#0x0002
-;	main.c:151: }
+;	main.c:144: }
 	ljmp	_delay
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'int_to_str'
@@ -1089,13 +1095,13 @@ _lcd_init:
 ;str           Allocated with name '_int_to_str_PARM_2'
 ;val           Allocated to registers r7 
 ;------------------------------------------------------------
-;	main.c:153: void int_to_str(unsigned char val, char *str) {
+;	main.c:146: void int_to_str(unsigned char val, char *str) {
 ;	-----------------------------------------
 ;	 function int_to_str
 ;	-----------------------------------------
 _int_to_str:
 	mov	r7, dpl
-;	main.c:154: str[0] = (val / 10) + '0';
+;	main.c:147: str[0] = (val / 10) + '0';
 	mov	r4,_int_to_str_PARM_2
 	mov	r5,(_int_to_str_PARM_2 + 1)
 	mov	r6,(_int_to_str_PARM_2 + 2)
@@ -1108,7 +1114,7 @@ _int_to_str:
 	mov	dph,r5
 	mov	b,r6
 	lcall	__gptrput
-;	main.c:155: str[1] = (val % 10) + '0';
+;	main.c:148: str[1] = (val % 10) + '0';
 	mov	a,#0x01
 	add	a, r4
 	mov	r1,a
@@ -1126,7 +1132,7 @@ _int_to_str:
 	mov	dph,r2
 	mov	b,r3
 	lcall	__gptrput
-;	main.c:156: str[2] = '\0';
+;	main.c:149: str[2] = '\0';
 	mov	a,#0x02
 	add	a, r4
 	mov	r4,a
@@ -1137,77 +1143,77 @@ _int_to_str:
 	mov	dph,r5
 	mov	b,r6
 	clr	a
-;	main.c:157: }
+;	main.c:150: }
 	ljmp	__gptrput
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'i2c_init'
 ;------------------------------------------------------------
-;	main.c:159: void i2c_init() {
+;	main.c:152: void i2c_init() {
 ;	-----------------------------------------
 ;	 function i2c_init
 ;	-----------------------------------------
 _i2c_init:
-;	main.c:160: SDA = 1;
+;	main.c:153: SDA = 1;
 ;	assignBit
 	setb	_SDA
-;	main.c:161: SCL = 1;
+;	main.c:154: SCL = 1;
 ;	assignBit
 	setb	_SCL
-;	main.c:162: delay(1);
+;	main.c:155: delay(1);
 	mov	dptr,#0x0001
-;	main.c:163: }
+;	main.c:156: }
 	ljmp	_delay
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'i2c_start'
 ;------------------------------------------------------------
-;	main.c:165: void i2c_start() {
+;	main.c:158: void i2c_start() {
 ;	-----------------------------------------
 ;	 function i2c_start
 ;	-----------------------------------------
 _i2c_start:
-;	main.c:166: SDA = 1;
+;	main.c:159: SDA = 1;
 ;	assignBit
 	setb	_SDA
-;	main.c:167: SCL = 1;
+;	main.c:160: SCL = 1;
 ;	assignBit
 	setb	_SCL
-;	main.c:168: delay(1);
+;	main.c:161: delay(1);
 	mov	dptr,#0x0001
 	lcall	_delay
-;	main.c:169: SDA = 0;
+;	main.c:162: SDA = 0;
 ;	assignBit
 	clr	_SDA
-;	main.c:170: delay(1);
+;	main.c:163: delay(1);
 	mov	dptr,#0x0001
 	lcall	_delay
-;	main.c:171: SCL = 0;
+;	main.c:164: SCL = 0;
 ;	assignBit
 	clr	_SCL
-;	main.c:172: }
+;	main.c:165: }
 	ret
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'i2c_stop'
 ;------------------------------------------------------------
-;	main.c:174: void i2c_stop() {
+;	main.c:167: void i2c_stop() {
 ;	-----------------------------------------
 ;	 function i2c_stop
 ;	-----------------------------------------
 _i2c_stop:
-;	main.c:175: SDA = 0;
+;	main.c:168: SDA = 0;
 ;	assignBit
 	clr	_SDA
-;	main.c:176: SCL = 1;
+;	main.c:169: SCL = 1;
 ;	assignBit
 	setb	_SCL
-;	main.c:177: delay(1);
+;	main.c:170: delay(1);
 	mov	dptr,#0x0001
 	lcall	_delay
-;	main.c:178: SDA = 1;
+;	main.c:171: SDA = 1;
 ;	assignBit
 	setb	_SDA
-;	main.c:179: delay(1);
+;	main.c:172: delay(1);
 	mov	dptr,#0x0001
-;	main.c:180: }
+;	main.c:173: }
 	ljmp	_delay
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'i2c_write'
@@ -1215,61 +1221,64 @@ _i2c_stop:
 ;value         Allocated to registers r7 
 ;i             Allocated to registers r6 
 ;------------------------------------------------------------
-;	main.c:182: __bit i2c_write(unsigned char value) {
+;	main.c:175: __bit i2c_write(unsigned char value) {
 ;	-----------------------------------------
 ;	 function i2c_write
 ;	-----------------------------------------
 _i2c_write:
 	mov	r7, dpl
-;	main.c:186: for (i = 0; i < 8; i++) {
+;	main.c:179: for (i = 0; i < 8; i++) {
 	mov	r6,#0x00
 00102$:
-;	main.c:187: SDA = (value & 0x80) ? 1 : 0;
+;	main.c:180: SDA = (value & 0x80) ? 1 : 0;
 	mov	ar5,r7
 	anl	ar5,#0x80
 ;	assignBit
 	mov	a,r5
 	add	a,#0xff
 	mov	_SDA,c
-;	main.c:188: SCL = 1;
+;	main.c:181: SCL = 1;
 ;	assignBit
 	setb	_SCL
-;	main.c:189: delay(1);
+;	main.c:182: delay(1);
 	mov	dptr,#0x0001
 	push	ar7
 	push	ar6
 	lcall	_delay
 	pop	ar6
 	pop	ar7
-;	main.c:190: SCL = 0;
+;	main.c:183: SCL = 0;
 ;	assignBit
 	clr	_SCL
-;	main.c:191: value <<= 1;
+;	main.c:184: value <<= 1;
 	mov	a,r7
 	add	a,r7
 	mov	r7,a
-;	main.c:186: for (i = 0; i < 8; i++) {
+;	main.c:179: for (i = 0; i < 8; i++) {
 	inc	r6
 	cjne	r6,#0x08,00119$
 00119$:
 	jc	00102$
-;	main.c:194: SDA = 1;
+;	main.c:187: SDA = 1;
 ;	assignBit
 	setb	_SDA
-;	main.c:195: SCL = 1;
+;	main.c:188: SCL = 1;
 ;	assignBit
 	setb	_SCL
-;	main.c:196: delay(1);
+;	main.c:189: delay(1);
 	mov	dptr,#0x0001
 	lcall	_delay
-;	main.c:197: ack = SDA;
+;	main.c:190: ack = SDA;
+;	assignBit
 	mov	c,_SDA
-;	main.c:198: SCL = 0;
+	mov	_i2c_write_ack_10000_29,c
+;	main.c:191: SCL = 0;
 ;	assignBit
 	clr	_SCL
-;	main.c:199: return ~ack;
-	setb	c
-;	main.c:200: }
+;	main.c:192: return !ack;
+	mov	c,_i2c_write_ack_10000_29
+	cpl	c
+;	main.c:193: }
 	ret
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'i2c_read'
@@ -1278,28 +1287,28 @@ _i2c_write:
 ;i             Allocated to registers r5 
 ;value         Allocated to registers r6 
 ;------------------------------------------------------------
-;	main.c:202: unsigned char i2c_read(unsigned char ack) {
+;	main.c:195: unsigned char i2c_read(unsigned char ack) {
 ;	-----------------------------------------
 ;	 function i2c_read
 ;	-----------------------------------------
 _i2c_read:
 	mov	r7, dpl
-;	main.c:203: unsigned char i, value = 0;
+;	main.c:196: unsigned char i, value = 0;
 	mov	r6,#0x00
-;	main.c:205: SDA = 1;
+;	main.c:198: SDA = 1;
 ;	assignBit
 	setb	_SDA
-;	main.c:207: for (i = 0; i < 8; i++) {
+;	main.c:200: for (i = 0; i < 8; i++) {
 	mov	r5,#0x00
 00104$:
-;	main.c:208: value <<= 1;
+;	main.c:201: value <<= 1;
 	mov	a,r6
 	add	a,r6
 	mov	r6,a
-;	main.c:209: SCL = 1;
+;	main.c:202: SCL = 1;
 ;	assignBit
 	setb	_SCL
-;	main.c:210: delay(1);
+;	main.c:203: delay(1);
 	mov	dptr,#0x0001
 	push	ar7
 	push	ar6
@@ -1308,15 +1317,15 @@ _i2c_read:
 	pop	ar5
 	pop	ar6
 	pop	ar7
-;	main.c:211: if (SDA)
+;	main.c:204: if (SDA)
 	jnb	_SDA,00102$
-;	main.c:212: value |= 1;
+;	main.c:205: value |= 1;
 	orl	ar6,#0x01
 00102$:
-;	main.c:213: SCL = 0;
+;	main.c:206: SCL = 0;
 ;	assignBit
 	clr	_SCL
-;	main.c:214: delay(1);
+;	main.c:207: delay(1);
 	mov	dptr,#0x0001
 	push	ar7
 	push	ar6
@@ -1325,12 +1334,12 @@ _i2c_read:
 	pop	ar5
 	pop	ar6
 	pop	ar7
-;	main.c:207: for (i = 0; i < 8; i++) {
+;	main.c:200: for (i = 0; i < 8; i++) {
 	inc	r5
 	cjne	r5,#0x08,00128$
 00128$:
 	jc	00104$
-;	main.c:217: SDA = (ack) ? 0 : 1;
+;	main.c:210: SDA = (ack) ? 0 : 1;
 	mov	a,r7
 	cjne	a,#0x01,00130$
 00130$:
@@ -1339,36 +1348,36 @@ _i2c_read:
 	rlc	a
 	add	a,#0xff
 	mov	_SDA,c
-;	main.c:218: SCL = 1;
+;	main.c:211: SCL = 1;
 ;	assignBit
 	setb	_SCL
-;	main.c:219: delay(1);
+;	main.c:212: delay(1);
 	mov	dptr,#0x0001
 	push	ar6
 	lcall	_delay
 	pop	ar6
-;	main.c:220: SCL = 0;
+;	main.c:213: SCL = 0;
 ;	assignBit
 	clr	_SCL
-;	main.c:221: SDA = 1;
+;	main.c:214: SDA = 1;
 ;	assignBit
 	setb	_SDA
-;	main.c:222: return value;
+;	main.c:215: return value;
 	mov	dpl, r6
-;	main.c:223: }
+;	main.c:216: }
 	ret
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'dec_to_bcd'
 ;------------------------------------------------------------
 ;val           Allocated to registers r7 
 ;------------------------------------------------------------
-;	main.c:225: unsigned char dec_to_bcd(unsigned char val) {
+;	main.c:218: unsigned char dec_to_bcd(unsigned char val) {
 ;	-----------------------------------------
 ;	 function dec_to_bcd
 ;	-----------------------------------------
 _dec_to_bcd:
 	mov	r7, dpl
-;	main.c:226: return ((val / 10) << 4) | (val % 10);
+;	main.c:219: return ((val / 10) << 4) | (val % 10);
 	mov	ar6,r7
 	mov	b,#0x0a
 	mov	a,r6
@@ -1382,19 +1391,19 @@ _dec_to_bcd:
 	mov	a,b
 	orl	a,r6
 	mov	dpl,a
-;	main.c:227: }
+;	main.c:220: }
 	ret
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'bcd_to_dec'
 ;------------------------------------------------------------
 ;val           Allocated to registers r7 
 ;------------------------------------------------------------
-;	main.c:229: unsigned char bcd_to_dec(unsigned char val) {
+;	main.c:222: unsigned char bcd_to_dec(unsigned char val) {
 ;	-----------------------------------------
 ;	 function bcd_to_dec
 ;	-----------------------------------------
 _bcd_to_dec:
-;	main.c:230: return ((val >> 4) * 10) + (val & 0x0F);
+;	main.c:223: return ((val >> 4) * 10) + (val & 0x0F);
 	mov	a,dpl
 	mov	r7,a
 	swap	a
@@ -1406,129 +1415,129 @@ _bcd_to_dec:
 	anl	a,r7
 	add	a, r6
 	mov	dpl,a
-;	main.c:231: }
+;	main.c:224: }
 	ret
 ;------------------------------------------------------------
-;Allocation info for local variables in function 'ds1307_init'
+;Allocation info for local variables in function 'ds3232_init'
 ;------------------------------------------------------------
-;	main.c:233: void ds1307_init(void) {
+;	main.c:226: void ds3232_init(void) {
 ;	-----------------------------------------
-;	 function ds1307_init
+;	 function ds3232_init
 ;	-----------------------------------------
-_ds1307_init:
-;	main.c:234: i2c_start();
+_ds3232_init:
+;	main.c:227: i2c_start();
 	lcall	_i2c_start
-;	main.c:235: i2c_write((DS1307_ADDRESS << 1) | 0); // Write mode
+;	main.c:228: i2c_write((DS3232_ADDRESS << 1) | 0); // Write mode
 	mov	dpl, #0xd0
 	lcall	_i2c_write
-;	main.c:236: i2c_write(0x00); // Point to seconds register
+;	main.c:229: i2c_write(0x00); // Point to seconds register
 	mov	dpl, #0x00
 	lcall	_i2c_write
-;	main.c:237: i2c_write(0x00); // Start oscillator (CH = 0)
+;	main.c:230: i2c_write(0x00); // Start oscillator (CH = 0)
 	mov	dpl, #0x00
 	lcall	_i2c_write
-;	main.c:238: i2c_stop();
-;	main.c:239: }
+;	main.c:231: i2c_stop();
+;	main.c:232: }
 	ljmp	_i2c_stop
 ;------------------------------------------------------------
-;Allocation info for local variables in function 'ds1307_set_time_date'
+;Allocation info for local variables in function 'ds3232_set_time_date'
 ;------------------------------------------------------------
-;min           Allocated with name '_ds1307_set_time_date_PARM_2'
-;sec           Allocated with name '_ds1307_set_time_date_PARM_3'
-;day           Allocated with name '_ds1307_set_time_date_PARM_4'
-;date          Allocated with name '_ds1307_set_time_date_PARM_5'
-;month         Allocated with name '_ds1307_set_time_date_PARM_6'
-;year          Allocated with name '_ds1307_set_time_date_PARM_7'
+;min           Allocated with name '_ds3232_set_time_date_PARM_2'
+;sec           Allocated with name '_ds3232_set_time_date_PARM_3'
+;day           Allocated with name '_ds3232_set_time_date_PARM_4'
+;date          Allocated with name '_ds3232_set_time_date_PARM_5'
+;month         Allocated with name '_ds3232_set_time_date_PARM_6'
+;year          Allocated with name '_ds3232_set_time_date_PARM_7'
 ;hrs           Allocated to registers r7 
 ;------------------------------------------------------------
-;	main.c:241: void ds1307_set_time_date(unsigned char hrs, unsigned char min, unsigned char sec, unsigned char day, unsigned char date, unsigned char month, unsigned char year) {
+;	main.c:234: void ds3232_set_time_date(unsigned char hrs, unsigned char min, unsigned char sec, unsigned char day, unsigned char date, unsigned char month, unsigned char year) {
 ;	-----------------------------------------
-;	 function ds1307_set_time_date
+;	 function ds3232_set_time_date
 ;	-----------------------------------------
-_ds1307_set_time_date:
+_ds3232_set_time_date:
 	mov	r7, dpl
-;	main.c:242: i2c_start();
+;	main.c:235: i2c_start();
 	push	ar7
 	lcall	_i2c_start
-;	main.c:243: i2c_write((DS1307_ADDRESS << 1) | 0);
+;	main.c:236: i2c_write((DS3232_ADDRESS << 1) | 0);
 	mov	dpl, #0xd0
 	lcall	_i2c_write
-;	main.c:244: i2c_write(0x00);
+;	main.c:237: i2c_write(0x00);
 	mov	dpl, #0x00
 	lcall	_i2c_write
-;	main.c:245: i2c_write(dec_to_bcd(sec));
-	mov	dpl, _ds1307_set_time_date_PARM_3
+;	main.c:238: i2c_write(dec_to_bcd(sec));
+	mov	dpl, _ds3232_set_time_date_PARM_3
 	lcall	_dec_to_bcd
 	lcall	_i2c_write
-;	main.c:246: i2c_write(dec_to_bcd(min));
-	mov	dpl, _ds1307_set_time_date_PARM_2
+;	main.c:239: i2c_write(dec_to_bcd(min));
+	mov	dpl, _ds3232_set_time_date_PARM_2
 	lcall	_dec_to_bcd
 	lcall	_i2c_write
 	pop	ar7
-;	main.c:247: i2c_write(dec_to_bcd(hrs));
+;	main.c:240: i2c_write(dec_to_bcd(hrs));
 	mov	dpl, r7
 	lcall	_dec_to_bcd
 	lcall	_i2c_write
-;	main.c:248: i2c_write(dec_to_bcd(day));
-	mov	dpl, _ds1307_set_time_date_PARM_4
+;	main.c:241: i2c_write(dec_to_bcd(day));
+	mov	dpl, _ds3232_set_time_date_PARM_4
 	lcall	_dec_to_bcd
 	lcall	_i2c_write
-;	main.c:249: i2c_write(dec_to_bcd(date));
-	mov	dpl, _ds1307_set_time_date_PARM_5
+;	main.c:242: i2c_write(dec_to_bcd(date));
+	mov	dpl, _ds3232_set_time_date_PARM_5
 	lcall	_dec_to_bcd
 	lcall	_i2c_write
-;	main.c:250: i2c_write(dec_to_bcd(month));
-	mov	dpl, _ds1307_set_time_date_PARM_6
+;	main.c:243: i2c_write(dec_to_bcd(month));
+	mov	dpl, _ds3232_set_time_date_PARM_6
 	lcall	_dec_to_bcd
 	lcall	_i2c_write
-;	main.c:251: i2c_write(dec_to_bcd(year));
-	mov	dpl, _ds1307_set_time_date_PARM_7
+;	main.c:244: i2c_write(dec_to_bcd(year));
+	mov	dpl, _ds3232_set_time_date_PARM_7
 	lcall	_dec_to_bcd
 	lcall	_i2c_write
-;	main.c:252: i2c_stop();
-;	main.c:253: }
+;	main.c:245: i2c_stop();
+;	main.c:246: }
 	ljmp	_i2c_stop
 ;------------------------------------------------------------
-;Allocation info for local variables in function 'ds1307_get_time_date'
+;Allocation info for local variables in function 'ds3232_get_time_date'
 ;------------------------------------------------------------
-;min           Allocated with name '_ds1307_get_time_date_PARM_2'
-;sec           Allocated with name '_ds1307_get_time_date_PARM_3'
-;day           Allocated with name '_ds1307_get_time_date_PARM_4'
-;date          Allocated with name '_ds1307_get_time_date_PARM_5'
-;month         Allocated with name '_ds1307_get_time_date_PARM_6'
-;year          Allocated with name '_ds1307_get_time_date_PARM_7'
+;min           Allocated with name '_ds3232_get_time_date_PARM_2'
+;sec           Allocated with name '_ds3232_get_time_date_PARM_3'
+;day           Allocated with name '_ds3232_get_time_date_PARM_4'
+;date          Allocated with name '_ds3232_get_time_date_PARM_5'
+;month         Allocated with name '_ds3232_get_time_date_PARM_6'
+;year          Allocated with name '_ds3232_get_time_date_PARM_7'
 ;hrs           Allocated to registers r5 r6 r7 
 ;------------------------------------------------------------
-;	main.c:255: void ds1307_get_time_date(unsigned char *hrs, unsigned char *min, unsigned char *sec, unsigned char *day, unsigned char *date, unsigned char *month, unsigned char *year) {
+;	main.c:248: void ds3232_get_time_date(unsigned char *hrs, unsigned char *min, unsigned char *sec, unsigned char *day, unsigned char *date, unsigned char *month, unsigned char *year) {
 ;	-----------------------------------------
-;	 function ds1307_get_time_date
+;	 function ds3232_get_time_date
 ;	-----------------------------------------
-_ds1307_get_time_date:
+_ds3232_get_time_date:
 	mov	r5, dpl
 	mov	r6, dph
 	mov	r7, b
-;	main.c:256: i2c_start();
+;	main.c:249: i2c_start();
 	push	ar7
 	push	ar6
 	push	ar5
 	lcall	_i2c_start
-;	main.c:257: i2c_write((DS1307_ADDRESS << 1) | 0);
+;	main.c:250: i2c_write((DS3232_ADDRESS << 1) | 0);
 	mov	dpl, #0xd0
 	lcall	_i2c_write
-;	main.c:258: i2c_write(0x00);
+;	main.c:251: i2c_write(0x00);
 	mov	dpl, #0x00
 	lcall	_i2c_write
-;	main.c:259: i2c_stop();
+;	main.c:252: i2c_stop();
 	lcall	_i2c_stop
-;	main.c:261: i2c_start();
+;	main.c:254: i2c_start();
 	lcall	_i2c_start
-;	main.c:262: i2c_write((DS1307_ADDRESS << 1) | 1);
+;	main.c:255: i2c_write((DS3232_ADDRESS << 1) | 1);
 	mov	dpl, #0xd1
 	lcall	_i2c_write
-;	main.c:263: *sec   = bcd_to_dec(i2c_read(1));
-	mov	r2,_ds1307_get_time_date_PARM_3
-	mov	r3,(_ds1307_get_time_date_PARM_3 + 1)
-	mov	r4,(_ds1307_get_time_date_PARM_3 + 2)
+;	main.c:256: *sec   = bcd_to_dec(i2c_read(1));
+	mov	r2,_ds3232_get_time_date_PARM_3
+	mov	r3,(_ds3232_get_time_date_PARM_3 + 1)
+	mov	r4,(_ds3232_get_time_date_PARM_3 + 2)
 	mov	dpl, #0x01
 	push	ar4
 	push	ar3
@@ -1544,10 +1553,10 @@ _ds1307_get_time_date:
 	mov	b,r4
 	mov	a,r1
 	lcall	__gptrput
-;	main.c:264: *min   = bcd_to_dec(i2c_read(1));
-	mov	r2,_ds1307_get_time_date_PARM_2
-	mov	r3,(_ds1307_get_time_date_PARM_2 + 1)
-	mov	r4,(_ds1307_get_time_date_PARM_2 + 2)
+;	main.c:257: *min   = bcd_to_dec(i2c_read(1));
+	mov	r2,_ds3232_get_time_date_PARM_2
+	mov	r3,(_ds3232_get_time_date_PARM_2 + 1)
+	mov	r4,(_ds3232_get_time_date_PARM_2 + 2)
 	mov	dpl, #0x01
 	push	ar4
 	push	ar3
@@ -1563,7 +1572,7 @@ _ds1307_get_time_date:
 	mov	b,r4
 	mov	a,r1
 	lcall	__gptrput
-;	main.c:265: *hrs   = bcd_to_dec(i2c_read(1));
+;	main.c:258: *hrs   = bcd_to_dec(i2c_read(1));
 	mov	dpl, #0x01
 	lcall	_i2c_read
 	lcall	_bcd_to_dec
@@ -1576,29 +1585,10 @@ _ds1307_get_time_date:
 	mov	b,r7
 	mov	a,r4
 	lcall	__gptrput
-;	main.c:266: *day   = bcd_to_dec(i2c_read(1));
-	mov	r5,_ds1307_get_time_date_PARM_4
-	mov	r6,(_ds1307_get_time_date_PARM_4 + 1)
-	mov	r7,(_ds1307_get_time_date_PARM_4 + 2)
-	mov	dpl, #0x01
-	push	ar7
-	push	ar6
-	push	ar5
-	lcall	_i2c_read
-	lcall	_bcd_to_dec
-	mov	r4, dpl
-	pop	ar5
-	pop	ar6
-	pop	ar7
-	mov	dpl,r5
-	mov	dph,r6
-	mov	b,r7
-	mov	a,r4
-	lcall	__gptrput
-;	main.c:267: *date  = bcd_to_dec(i2c_read(1));
-	mov	r5,_ds1307_get_time_date_PARM_5
-	mov	r6,(_ds1307_get_time_date_PARM_5 + 1)
-	mov	r7,(_ds1307_get_time_date_PARM_5 + 2)
+;	main.c:259: *day   = bcd_to_dec(i2c_read(1));
+	mov	r5,_ds3232_get_time_date_PARM_4
+	mov	r6,(_ds3232_get_time_date_PARM_4 + 1)
+	mov	r7,(_ds3232_get_time_date_PARM_4 + 2)
 	mov	dpl, #0x01
 	push	ar7
 	push	ar6
@@ -1614,10 +1604,10 @@ _ds1307_get_time_date:
 	mov	b,r7
 	mov	a,r4
 	lcall	__gptrput
-;	main.c:268: *month = bcd_to_dec(i2c_read(1));
-	mov	r5,_ds1307_get_time_date_PARM_6
-	mov	r6,(_ds1307_get_time_date_PARM_6 + 1)
-	mov	r7,(_ds1307_get_time_date_PARM_6 + 2)
+;	main.c:260: *date  = bcd_to_dec(i2c_read(1));
+	mov	r5,_ds3232_get_time_date_PARM_5
+	mov	r6,(_ds3232_get_time_date_PARM_5 + 1)
+	mov	r7,(_ds3232_get_time_date_PARM_5 + 2)
 	mov	dpl, #0x01
 	push	ar7
 	push	ar6
@@ -1633,10 +1623,29 @@ _ds1307_get_time_date:
 	mov	b,r7
 	mov	a,r4
 	lcall	__gptrput
-;	main.c:269: *year  = bcd_to_dec(i2c_read(0));
-	mov	r5,_ds1307_get_time_date_PARM_7
-	mov	r6,(_ds1307_get_time_date_PARM_7 + 1)
-	mov	r7,(_ds1307_get_time_date_PARM_7 + 2)
+;	main.c:261: *month = bcd_to_dec(i2c_read(1));
+	mov	r5,_ds3232_get_time_date_PARM_6
+	mov	r6,(_ds3232_get_time_date_PARM_6 + 1)
+	mov	r7,(_ds3232_get_time_date_PARM_6 + 2)
+	mov	dpl, #0x01
+	push	ar7
+	push	ar6
+	push	ar5
+	lcall	_i2c_read
+	lcall	_bcd_to_dec
+	mov	r4, dpl
+	pop	ar5
+	pop	ar6
+	pop	ar7
+	mov	dpl,r5
+	mov	dph,r6
+	mov	b,r7
+	mov	a,r4
+	lcall	__gptrput
+;	main.c:262: *year  = bcd_to_dec(i2c_read(0));
+	mov	r5,_ds3232_get_time_date_PARM_7
+	mov	r6,(_ds3232_get_time_date_PARM_7 + 1)
+	mov	r7,(_ds3232_get_time_date_PARM_7 + 2)
 	mov	dpl, #0x00
 	push	ar7
 	push	ar6
@@ -1652,8 +1661,8 @@ _ds1307_get_time_date:
 	mov	b,r7
 	mov	a,r4
 	lcall	__gptrput
-;	main.c:270: i2c_stop();
-;	main.c:271: }
+;	main.c:263: i2c_stop();
+;	main.c:264: }
 	ljmp	_i2c_stop
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'display'
@@ -1666,85 +1675,85 @@ _ds1307_get_time_date:
 ;day           Allocated with name '_display_PARM_7'
 ;h             Allocated to registers r7 
 ;------------------------------------------------------------
-;	main.c:274: void display(unsigned char h, unsigned char m, unsigned char s, unsigned char d, unsigned char mo, unsigned char y, unsigned char day ) {
+;	main.c:266: void display(unsigned char h, unsigned char m, unsigned char s, unsigned char d, unsigned char mo, unsigned char y, unsigned char day ) {
 ;	-----------------------------------------
 ;	 function display
 ;	-----------------------------------------
 _display:
 	mov	r7, dpl
-;	main.c:275: int_to_str(h, buf);
+;	main.c:267: int_to_str(h, buf);
 	mov	_int_to_str_PARM_2,#_buf
 	mov	(_int_to_str_PARM_2 + 1),#0x00
 	mov	(_int_to_str_PARM_2 + 2),#0x40
 	mov	dpl, r7
 	lcall	_int_to_str
-;	main.c:276: time_str[0] = buf[0];
+;	main.c:268: time_str[0] = buf[0];
 	mov	_time_str,_buf
-;	main.c:277: time_str[1] = buf[1];
+;	main.c:269: time_str[1] = buf[1];
 	mov	(_time_str + 0x0001),(_buf + 0x0001)
-;	main.c:278: time_str[2] = ':';
+;	main.c:270: time_str[2] = ':';
 	mov	(_time_str + 0x0002),#0x3a
-;	main.c:279: int_to_str(m, buf);
+;	main.c:271: int_to_str(m, buf);
 	mov	_int_to_str_PARM_2,#_buf
 	mov	(_int_to_str_PARM_2 + 1),#0x00
 	mov	(_int_to_str_PARM_2 + 2),#0x40
 	mov	dpl, _display_PARM_2
 	lcall	_int_to_str
-;	main.c:280: time_str[3] = buf[0];
+;	main.c:272: time_str[3] = buf[0];
 	mov	(_time_str + 0x0003),_buf
-;	main.c:281: time_str[4] = buf[1];
+;	main.c:273: time_str[4] = buf[1];
 	mov	(_time_str + 0x0004),(_buf + 0x0001)
-;	main.c:282: time_str[5] = ':';
+;	main.c:274: time_str[5] = ':';
 	mov	(_time_str + 0x0005),#0x3a
-;	main.c:283: int_to_str(s, buf);
+;	main.c:275: int_to_str(s, buf);
 	mov	_int_to_str_PARM_2,#_buf
 	mov	(_int_to_str_PARM_2 + 1),#0x00
 	mov	(_int_to_str_PARM_2 + 2),#0x40
 	mov	dpl, _display_PARM_3
 	lcall	_int_to_str
-;	main.c:284: time_str[6] = buf[0];
+;	main.c:276: time_str[6] = buf[0];
 	mov	(_time_str + 0x0006),_buf
-;	main.c:285: time_str[7] = buf[1];
+;	main.c:277: time_str[7] = buf[1];
 	mov	(_time_str + 0x0007),(_buf + 0x0001)
-;	main.c:286: time_str[8] = '\0';
+;	main.c:278: time_str[8] = '\0';
 	mov	(_time_str + 0x0008),#0x00
-;	main.c:289: int_to_str(d, buf);
+;	main.c:281: int_to_str(d, buf);
 	mov	_int_to_str_PARM_2,#_buf
 	mov	(_int_to_str_PARM_2 + 1),#0x00
 	mov	(_int_to_str_PARM_2 + 2),#0x40
 	mov	dpl, _display_PARM_4
 	lcall	_int_to_str
-;	main.c:290: date_str[0] = buf[0];
+;	main.c:282: date_str[0] = buf[0];
 	mov	_date_str,_buf
-;	main.c:291: date_str[1] = buf[1];
+;	main.c:283: date_str[1] = buf[1];
 	mov	(_date_str + 0x0001),(_buf + 0x0001)
-;	main.c:292: date_str[2] = ':';
+;	main.c:284: date_str[2] = ':';
 	mov	(_date_str + 0x0002),#0x3a
-;	main.c:293: int_to_str(mo, buf);
+;	main.c:285: int_to_str(mo, buf);
 	mov	_int_to_str_PARM_2,#_buf
 	mov	(_int_to_str_PARM_2 + 1),#0x00
 	mov	(_int_to_str_PARM_2 + 2),#0x40
 	mov	dpl, _display_PARM_5
 	lcall	_int_to_str
-;	main.c:294: date_str[3] = buf[0];
+;	main.c:286: date_str[3] = buf[0];
 	mov	(_date_str + 0x0003),_buf
-;	main.c:295: date_str[4] = buf[1];
+;	main.c:287: date_str[4] = buf[1];
 	mov	(_date_str + 0x0004),(_buf + 0x0001)
-;	main.c:296: date_str[5] = ':';
+;	main.c:288: date_str[5] = ':';
 	mov	(_date_str + 0x0005),#0x3a
-;	main.c:297: int_to_str(y, buf);
+;	main.c:289: int_to_str(y, buf);
 	mov	_int_to_str_PARM_2,#_buf
 	mov	(_int_to_str_PARM_2 + 1),#0x00
 	mov	(_int_to_str_PARM_2 + 2),#0x40
 	mov	dpl, _display_PARM_6
 	lcall	_int_to_str
-;	main.c:298: date_str[6] = buf[0];
+;	main.c:290: date_str[6] = buf[0];
 	mov	(_date_str + 0x0006),_buf
-;	main.c:299: date_str[7] = buf[1];
+;	main.c:291: date_str[7] = buf[1];
 	mov	(_date_str + 0x0007),(_buf + 0x0001)
-;	main.c:300: date_str[8] = ' ';
+;	main.c:292: date_str[8] = ' ';
 	mov	(_date_str + 0x0008),#0x20
-;	main.c:302: switch(day) {
+;	main.c:294: switch(day) {
 	mov	a,_display_PARM_7
 	add	a,#0xff - 0x07
 	jc	00108$
@@ -1776,112 +1785,112 @@ _display:
 	.db	00105$>>8
 	.db	00106$>>8
 	.db	00107$>>8
-;	main.c:303: case 1:
+;	main.c:295: case 1:
 00101$:
-;	main.c:304: buf[0] = 'S';
+;	main.c:296: buf[0] = 'S';
 	mov	_buf,#0x53
-;	main.c:305: buf[1] = 'u';
+;	main.c:297: buf[1] = 'u';
 	mov	(_buf + 0x0001),#0x75
-;	main.c:306: buf[2] = 'n';
+;	main.c:298: buf[2] = 'n';
 	mov	(_buf + 0x0002),#0x6e
-;	main.c:307: break;
-;	main.c:308: case 2:
+;	main.c:299: break;
+;	main.c:300: case 2:
 	sjmp	00108$
 00102$:
-;	main.c:309: buf[0] = 'M';
+;	main.c:301: buf[0] = 'M';
 	mov	_buf,#0x4d
-;	main.c:310: buf[1] = 'o';
+;	main.c:302: buf[1] = 'o';
 	mov	(_buf + 0x0001),#0x6f
-;	main.c:311: buf[2] = 'n';
+;	main.c:303: buf[2] = 'n';
 	mov	(_buf + 0x0002),#0x6e
-;	main.c:312: break;
-;	main.c:313: case 3:
+;	main.c:304: break;
+;	main.c:305: case 3:
 	sjmp	00108$
 00103$:
-;	main.c:314: buf[0] = 'T';
+;	main.c:306: buf[0] = 'T';
 	mov	_buf,#0x54
-;	main.c:315: buf[1] = 'u';
+;	main.c:307: buf[1] = 'u';
 	mov	(_buf + 0x0001),#0x75
-;	main.c:316: buf[2] = 'e';
+;	main.c:308: buf[2] = 'e';
 	mov	(_buf + 0x0002),#0x65
-;	main.c:317: break;
-;	main.c:318: case 4:
+;	main.c:309: break;
+;	main.c:310: case 4:
 	sjmp	00108$
 00104$:
-;	main.c:319: buf[0] = 'W';
+;	main.c:311: buf[0] = 'W';
 	mov	_buf,#0x57
-;	main.c:320: buf[1] = 'e';
+;	main.c:312: buf[1] = 'e';
 	mov	(_buf + 0x0001),#0x65
-;	main.c:321: buf[2] = 'd';
+;	main.c:313: buf[2] = 'd';
 	mov	(_buf + 0x0002),#0x64
-;	main.c:322: break;
-;	main.c:323: case 5:
+;	main.c:314: break;
+;	main.c:315: case 5:
 	sjmp	00108$
 00105$:
-;	main.c:324: buf[0] = 'T';
+;	main.c:316: buf[0] = 'T';
 	mov	_buf,#0x54
-;	main.c:325: buf[1] = 'h';
+;	main.c:317: buf[1] = 'h';
 	mov	(_buf + 0x0001),#0x68
-;	main.c:326: buf[2] = 'u';
+;	main.c:318: buf[2] = 'u';
 	mov	(_buf + 0x0002),#0x75
-;	main.c:327: break;
-;	main.c:328: case 6:
+;	main.c:319: break;
+;	main.c:320: case 6:
 	sjmp	00108$
 00106$:
-;	main.c:329: buf[0] = 'F';
+;	main.c:321: buf[0] = 'F';
 	mov	_buf,#0x46
-;	main.c:330: buf[1] = 'r';
+;	main.c:322: buf[1] = 'r';
 	mov	(_buf + 0x0001),#0x72
-;	main.c:331: buf[2] = 'i';
+;	main.c:323: buf[2] = 'i';
 	mov	(_buf + 0x0002),#0x69
-;	main.c:332: break;
-;	main.c:333: case 7:
+;	main.c:324: break;
+;	main.c:325: case 7:
 	sjmp	00108$
 00107$:
-;	main.c:334: buf[0] = 'S';
+;	main.c:326: buf[0] = 'S';
 	mov	_buf,#0x53
-;	main.c:335: buf[1] = 'a';
+;	main.c:327: buf[1] = 'a';
 	mov	(_buf + 0x0001),#0x61
-;	main.c:336: buf[2] = 't';
+;	main.c:328: buf[2] = 't';
 	mov	(_buf + 0x0002),#0x74
-;	main.c:338: }
+;	main.c:330: }
 00108$:
-;	main.c:339: date_str[9] = buf[0];
+;	main.c:331: date_str[9] = buf[0];
 	mov	(_date_str + 0x0009),_buf
-;	main.c:340: date_str[10] = buf[1];
+;	main.c:332: date_str[10] = buf[1];
 	mov	(_date_str + 0x000a),(_buf + 0x0001)
-;	main.c:341: date_str[11] = buf[2];
+;	main.c:333: date_str[11] = buf[2];
 	mov	(_date_str + 0x000b),(_buf + 0x0002)
-;	main.c:342: date_str[12] = '\0';
+;	main.c:334: date_str[12] = '\0';
 	mov	(_date_str + 0x000c),#0x00
-;	main.c:345: lcd_goto(0, 0);
+;	main.c:337: lcd_goto(0, 0);
 	mov	_lcd_goto_PARM_2,#0x00
 	mov	dpl, #0x00
 	lcall	_lcd_goto
-;	main.c:346: lcd_string(time_str);
+;	main.c:338: lcd_string(time_str);
 	mov	dptr,#_time_str
 	mov	b, #0x40
 	lcall	_lcd_string
-;	main.c:347: lcd_goto(1, 0);
+;	main.c:339: lcd_goto(1, 0);
 	mov	_lcd_goto_PARM_2,#0x00
 	mov	dpl, #0x01
 	lcall	_lcd_goto
-;	main.c:348: lcd_string(date_str);
+;	main.c:340: lcd_string(date_str);
 	mov	dptr,#_date_str
 	mov	b, #0x40
-;	main.c:349: }
+;	main.c:341: }
 	ljmp	_lcd_string
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'step_motor'
 ;------------------------------------------------------------
 ;step          Allocated to registers r6 r7 
 ;------------------------------------------------------------
-;	main.c:351: void step_motor(int step) {
+;	main.c:343: void step_motor(int step) {
 ;	-----------------------------------------
 ;	 function step_motor
 ;	-----------------------------------------
 _step_motor:
-;	main.c:352: switch(step % 8) {
+;	main.c:344: switch(step % 8) {
 	mov	__modsint_PARM_2,#0x08
 	mov	(__modsint_PARM_2 + 1),#0x00
 	lcall	__modsint
@@ -1927,351 +1936,786 @@ _step_motor:
 	.db	00106$>>8
 	.db	00107$>>8
 	.db	00108$>>8
-;	main.c:353: case 0:
+;	main.c:345: case 0:
 00101$:
-;	main.c:354: IN1=1;
+;	main.c:346: IN1=1;
 ;	assignBit
 	setb	_IN1
-;	main.c:355: IN2=0;
+;	main.c:347: IN2=0;
 ;	assignBit
 	clr	_IN2
-;	main.c:356: IN3=0;
+;	main.c:348: IN3=0;
 ;	assignBit
 	clr	_IN3
-;	main.c:357: IN4=0;
+;	main.c:349: IN4=0;
 ;	assignBit
 	clr	_IN4
-;	main.c:358: break;
-;	main.c:359: case 1:
+;	main.c:350: break;
+;	main.c:351: case 1:
 	ret
 00102$:
-;	main.c:360: IN1=1;
+;	main.c:352: IN1=1;
 ;	assignBit
 	setb	_IN1
-;	main.c:361: IN2=1;
+;	main.c:353: IN2=1;
 ;	assignBit
 	setb	_IN2
-;	main.c:362: IN3=0;
+;	main.c:354: IN3=0;
 ;	assignBit
 	clr	_IN3
-;	main.c:363: IN4=0;
+;	main.c:355: IN4=0;
 ;	assignBit
 	clr	_IN4
-;	main.c:364: break;
-;	main.c:365: case 2:
+;	main.c:356: break;
+;	main.c:357: case 2:
 	ret
 00103$:
-;	main.c:366: IN1=0;
+;	main.c:358: IN1=0;
 ;	assignBit
 	clr	_IN1
-;	main.c:367: IN2=1;
+;	main.c:359: IN2=1;
 ;	assignBit
 	setb	_IN2
-;	main.c:368: IN3=0;
+;	main.c:360: IN3=0;
 ;	assignBit
 	clr	_IN3
-;	main.c:369: IN4=0;
+;	main.c:361: IN4=0;
 ;	assignBit
 	clr	_IN4
-;	main.c:370: break;
-;	main.c:371: case 3:
+;	main.c:362: break;
+;	main.c:363: case 3:
 	ret
 00104$:
-;	main.c:372: IN1=0;
+;	main.c:364: IN1=0;
 ;	assignBit
 	clr	_IN1
-;	main.c:373: IN2=1;
+;	main.c:365: IN2=1;
 ;	assignBit
 	setb	_IN2
-;	main.c:374: IN3=1;
+;	main.c:366: IN3=1;
 ;	assignBit
 	setb	_IN3
-;	main.c:375: IN4=0;
+;	main.c:367: IN4=0;
 ;	assignBit
 	clr	_IN4
-;	main.c:376: break;
-;	main.c:377: case 4:
+;	main.c:368: break;
+;	main.c:369: case 4:
 	ret
 00105$:
-;	main.c:378: IN1=0;
+;	main.c:370: IN1=0;
 ;	assignBit
 	clr	_IN1
-;	main.c:379: IN2=0;
+;	main.c:371: IN2=0;
 ;	assignBit
 	clr	_IN2
-;	main.c:380: IN3=1;
+;	main.c:372: IN3=1;
 ;	assignBit
 	setb	_IN3
-;	main.c:381: IN4=0;
+;	main.c:373: IN4=0;
 ;	assignBit
 	clr	_IN4
-;	main.c:382: break;
-;	main.c:383: case 5:
+;	main.c:374: break;
+;	main.c:375: case 5:
 	ret
 00106$:
-;	main.c:384: IN1=0;
+;	main.c:376: IN1=0;
 ;	assignBit
 	clr	_IN1
-;	main.c:385: IN2=0;
+;	main.c:377: IN2=0;
 ;	assignBit
 	clr	_IN2
-;	main.c:386: IN3=1;
+;	main.c:378: IN3=1;
 ;	assignBit
 	setb	_IN3
-;	main.c:387: IN4=1;
+;	main.c:379: IN4=1;
 ;	assignBit
 	setb	_IN4
-;	main.c:388: break;
-;	main.c:389: case 6:
+;	main.c:380: break;
+;	main.c:381: case 6:
 	ret
 00107$:
-;	main.c:390: IN1=0;
+;	main.c:382: IN1=0;
 ;	assignBit
 	clr	_IN1
-;	main.c:391: IN2=0;
+;	main.c:383: IN2=0;
 ;	assignBit
 	clr	_IN2
-;	main.c:392: IN3=0;
+;	main.c:384: IN3=0;
 ;	assignBit
 	clr	_IN3
-;	main.c:393: IN4=1;
+;	main.c:385: IN4=1;
 ;	assignBit
 	setb	_IN4
-;	main.c:394: break;
-;	main.c:395: case 7:
+;	main.c:386: break;
+;	main.c:387: case 7:
 	ret
 00108$:
-;	main.c:396: IN1=1;
+;	main.c:388: IN1=1;
 ;	assignBit
 	setb	_IN1
-;	main.c:397: IN2=0;
+;	main.c:389: IN2=0;
 ;	assignBit
 	clr	_IN2
-;	main.c:398: IN3=0;
+;	main.c:390: IN3=0;
 ;	assignBit
 	clr	_IN3
-;	main.c:399: IN4=1;
+;	main.c:391: IN4=1;
 ;	assignBit
 	setb	_IN4
-;	main.c:401: }
+;	main.c:393: }
 00110$:
-;	main.c:402: }
+;	main.c:394: }
 	ret
 ;------------------------------------------------------------
-;Allocation info for local variables in function 'Settings'
+;Allocation info for local variables in function 'write_eeprom'
 ;------------------------------------------------------------
-;	main.c:405: void Settings(void) __interrupt(0) {
-;	-----------------------------------------
-;	 function Settings
-;	-----------------------------------------
-_Settings:
-;	main.c:406: EX0 = 0;          // Disable external interrupt
-;	assignBit
-	clr	_EX0
-;	main.c:407: edit_mode = 1;    // Signal main loop to enter edit mode
-;	assignBit
-	setb	_edit_mode
-;	main.c:408: EX0 = 1;          // Re-enable interrupt
-;	assignBit
-	setb	_EX0
-;	main.c:409: }
-	reti
-;	eliminated unneeded mov psw,# (no regs used in bank)
-;	eliminated unneeded push/pop not_psw
-;	eliminated unneeded push/pop dpl
-;	eliminated unneeded push/pop dph
-;	eliminated unneeded push/pop b
-;	eliminated unneeded push/pop acc
+;value         Allocated with name '_write_eeprom_PARM_2'
+;addr          Allocated to registers r6 r7 
 ;------------------------------------------------------------
-;Allocation info for local variables in function 'ds1307_write_ram'
-;------------------------------------------------------------
-;value         Allocated with name '_ds1307_write_ram_PARM_2'
-;addr          Allocated to registers r7 
-;------------------------------------------------------------
-;	main.c:411: void ds1307_write_ram(unsigned char addr, unsigned char value) {
+;	main.c:396: void write_eeprom(unsigned int addr, unsigned char value) {
 ;	-----------------------------------------
-;	 function ds1307_write_ram
+;	 function write_eeprom
 ;	-----------------------------------------
-_ds1307_write_ram:
-	mov	r7, dpl
-;	main.c:413: if (addr < 0x08 || addr > 0x3F) return;
-	cjne	r7,#0x08,00112$
-00112$:
-	jc	00101$
-	mov	a,r7
-	add	a,#0xff - 0x3f
+_write_eeprom:
+	mov	r6, dpl
+	mov	r7, dph
+;	main.c:398: if (addr > 0x0FFF) return;
+	clr	c
+	mov	a,#0xff
+	subb	a,r6
+	mov	a,#0x0f
+	subb	a,r7
 	jnc	00102$
-00101$:
 	ret
 00102$:
-;	main.c:415: i2c_start();
+;	main.c:400: i2c_start();
 	push	ar7
+	push	ar6
 	lcall	_i2c_start
-;	main.c:416: i2c_write((DS1307_ADDRESS << 1) | 0);  // Write mode
-	mov	dpl, #0xd0
+;	main.c:401: i2c_write((AT24C512B_ADDRESS << 1) | 0);  // Write mode
+	mov	dpl, #0xae
 	lcall	_i2c_write
+	pop	ar6
 	pop	ar7
-;	main.c:417: i2c_write(addr);                       // RAM address
-	mov	dpl, r7
+;	main.c:402: i2c_write((addr>>8) & 0xFF);                       // upper byte RAM address
+	mov	dpl,r7
+	push	ar7
+	push	ar6
 	lcall	_i2c_write
-;	main.c:418: i2c_write(value);                      // Data
-	mov	dpl, _ds1307_write_ram_PARM_2
+	pop	ar6
+	pop	ar7
+;	main.c:403: i2c_write(addr & 0xFF);				  			  // lower byte RAM address
+	mov	dpl,r6
 	lcall	_i2c_write
-;	main.c:419: i2c_stop();
-;	main.c:420: }
-	ljmp	_i2c_stop
+;	main.c:404: i2c_write(value);                      // Data
+	mov	dpl, _write_eeprom_PARM_2
+	lcall	_i2c_write
+;	main.c:405: i2c_stop();
+	lcall	_i2c_stop
+;	main.c:406: delay(5000);
+	mov	dptr,#0x1388
+;	main.c:407: }
+	ljmp	_delay
 ;------------------------------------------------------------
-;Allocation info for local variables in function 'ds1307_read_ram'
+;Allocation info for local variables in function 'read_eeprom'
 ;------------------------------------------------------------
-;addr          Allocated to registers r7 
+;addr          Allocated to registers r6 r7 
 ;data          Allocated to registers r7 
 ;------------------------------------------------------------
-;	main.c:423: unsigned char ds1307_read_ram(unsigned char addr) {
+;	main.c:409: unsigned char read_eeprom(unsigned int addr) {
 ;	-----------------------------------------
-;	 function ds1307_read_ram
+;	 function read_eeprom
 ;	-----------------------------------------
-_ds1307_read_ram:
-	mov	r7, dpl
-;	main.c:426: if (addr < 0x08 || addr > 0x3F) return 0xFF; // Return invalid value if out of range
-	cjne	r7,#0x08,00112$
-00112$:
-	jc	00101$
-	mov	a,r7
-	add	a,#0xff - 0x3f
+_read_eeprom:
+	mov	r6, dpl
+	mov	r7, dph
+;	main.c:412: if (addr > 0x0FFF) return 0xFF; // Return invalid value if out of range
+	clr	c
+	mov	a,#0xff
+	subb	a,r6
+	mov	a,#0x0f
+	subb	a,r7
 	jnc	00102$
-00101$:
 	mov	dpl, #0xff
 	ret
 00102$:
-;	main.c:428: i2c_start();
+;	main.c:414: i2c_start();
 	push	ar7
+	push	ar6
 	lcall	_i2c_start
-;	main.c:429: i2c_write((DS1307_ADDRESS << 1) | 0);  // Write mode to set address pointer
-	mov	dpl, #0xd0
+;	main.c:415: i2c_write((AT24C512B_ADDRESS << 1) | 0);  // Write mode to set address pointer
+	mov	dpl, #0xae
 	lcall	_i2c_write
+	pop	ar6
 	pop	ar7
-;	main.c:430: i2c_write(addr);
-	mov	dpl, r7
+;	main.c:416: i2c_write((addr>>8) & 0xFF); 
+	mov	dpl,r7
+	push	ar7
+	push	ar6
 	lcall	_i2c_write
-;	main.c:432: i2c_start();                           // Repeated start
+	pop	ar6
+	pop	ar7
+;	main.c:417: i2c_write(addr & 0xFF);	
+	mov	dpl,r6
+	lcall	_i2c_write
+;	main.c:419: i2c_start();                           // Repeated start
 	lcall	_i2c_start
-;	main.c:433: i2c_write((DS1307_ADDRESS << 1) | 1);  // Read mode
-	mov	dpl, #0xd1
+;	main.c:420: i2c_write((AT24C512B_ADDRESS << 1) | 1);  // Read mode
+	mov	dpl, #0xaf
 	lcall	_i2c_write
-;	main.c:434: data = i2c_read(0);                    // No ACK
+;	main.c:421: data = i2c_read(0);                    // No ACK
 	mov	dpl, #0x00
 	lcall	_i2c_read
 	mov	r7, dpl
-;	main.c:435: i2c_stop();
+;	main.c:422: i2c_stop();
 	push	ar7
 	lcall	_i2c_stop
 	pop	ar7
-;	main.c:437: return data;
+;	main.c:423: return data;
 	mov	dpl, r7
-;	main.c:438: }
+;	main.c:424: }
 	ret
 ;------------------------------------------------------------
-;Allocation info for local variables in function 'write_alarm_to_ds1307'
+;Allocation info for local variables in function 'write_alarm_to_eeprom'
 ;------------------------------------------------------------
-;h             Allocated with name '_write_alarm_to_ds1307_PARM_2'
-;m             Allocated with name '_write_alarm_to_ds1307_PARM_3'
+;h             Allocated with name '_write_alarm_to_eeprom_PARM_2'
+;m             Allocated with name '_write_alarm_to_eeprom_PARM_3'
 ;index         Allocated to registers r7 
 ;------------------------------------------------------------
-;	main.c:441: void write_alarm_to_ds1307(unsigned char index, unsigned char h, unsigned char m) {
+;	main.c:426: void write_alarm_to_eeprom(unsigned char index, unsigned char h, unsigned char m) {
 ;	-----------------------------------------
-;	 function write_alarm_to_ds1307
+;	 function write_alarm_to_eeprom
 ;	-----------------------------------------
-_write_alarm_to_ds1307:
-;	main.c:442: ds1307_write_ram(ALARM_RAM_BASE + (index * 2) + 1, h);
-	mov	a,dpl
-	add	a,dpl
-	mov	r7,a
-	add	a,#0x09
-	mov	dpl,a
-	mov	_ds1307_write_ram_PARM_2,_write_alarm_to_ds1307_PARM_2
-	push	ar7
-	lcall	_ds1307_write_ram
-	pop	ar7
-;	main.c:443: ds1307_write_ram(ALARM_RAM_BASE + (index * 2) + 2, m);
-	mov	a,#0x0a
-	add	a, r7
-	mov	dpl,a
-	mov	_ds1307_write_ram_PARM_2,_write_alarm_to_ds1307_PARM_3
-;	main.c:444: }
-	ljmp	_ds1307_write_ram
-;------------------------------------------------------------
-;Allocation info for local variables in function 'load_alarms_from_ds1307'
-;------------------------------------------------------------
-;count_        Allocated to registers r7 
-;i             Allocated to registers r6 
-;------------------------------------------------------------
-;	main.c:446: void load_alarms_from_ds1307(unsigned char count_) {
-;	-----------------------------------------
-;	 function load_alarms_from_ds1307
-;	-----------------------------------------
-_load_alarms_from_ds1307:
+_write_alarm_to_eeprom:
 	mov	r7, dpl
-;	main.c:447: for (unsigned char i = 0; i < count_; i++) {
+;	main.c:427: write_eeprom(EEPROM_BASE + (index * 2) + 1, h);
 	mov	r6,#0x00
-00103$:
+	mov	a,r7
+	add	a,r7
+	mov	r7,a
+	mov	a,r6
+	rlc	a
+	mov	r6,a
+	mov	dpl,r7
+	mov	dph,r6
+	inc	dptr
+	mov	_write_eeprom_PARM_2,_write_alarm_to_eeprom_PARM_2
+	push	ar7
+	push	ar6
+	lcall	_write_eeprom
+	pop	ar6
+	pop	ar7
+;	main.c:428: write_eeprom(EEPROM_BASE + (index * 2) + 2, m);
+	mov	dpl,r7
+	mov	dph,r6
+	inc	dptr
+	inc	dptr
+	mov	_write_eeprom_PARM_2,_write_alarm_to_eeprom_PARM_3
+;	main.c:429: }
+	ljmp	_write_eeprom
+;------------------------------------------------------------
+;Allocation info for local variables in function 'alarm_arranger'
+;------------------------------------------------------------
+;minutes       Allocated with name '_alarm_arranger_PARM_2'
+;n             Allocated with name '_alarm_arranger_PARM_3'
+;hours         Allocated with name '_alarm_arranger_hours_10000_63'
+;i             Allocated with name '_alarm_arranger_i_10000_64'
+;j             Allocated to registers 
+;min_idx       Allocated with name '_alarm_arranger_min_idx_10000_64'
+;temp          Allocated with name '_alarm_arranger_temp_30001_71'
+;__index       Allocated with name '_alarm_arranger___index_10001_72'
+;sloc0         Allocated with name '_alarm_arranger_sloc0_1_0'
+;sloc1         Allocated with name '_alarm_arranger_sloc1_1_0'
+;------------------------------------------------------------
+;	main.c:432: void alarm_arranger(unsigned char hours[], unsigned char minutes[], unsigned char *n){
+;	-----------------------------------------
+;	 function alarm_arranger
+;	-----------------------------------------
+_alarm_arranger:
+	mov	_alarm_arranger_hours_10000_63,dpl
+	mov	(_alarm_arranger_hours_10000_63 + 1),dph
+	mov	(_alarm_arranger_hours_10000_63 + 2),b
+;	main.c:436: for (i = 0; i < *n - 1; i++) {
+	mov	r2,_alarm_arranger_PARM_3
+	mov	r3,(_alarm_arranger_PARM_3 + 1)
+	mov	r4,(_alarm_arranger_PARM_3 + 2)
+	mov	r1,#0x00
+00115$:
+	mov	dpl,r2
+	mov	dph,r3
+	mov	b,r4
+	lcall	__gptrget
+	mov	r0,a
+	mov	r7,#0x00
+	dec	r0
+	cjne	r0,#0xff,00188$
+	dec	r7
+00188$:
+	mov	ar5,r1
+	mov	r6,#0x00
+	clr	c
+	mov	a,r5
+	subb	a,r0
+	mov	a,r6
+	xrl	a,#0x80
+	mov	b,r7
+	xrl	b,#0x80
+	subb	a,b
+	jc	00189$
+	ljmp	00106$
+00189$:
+;	main.c:437: min_idx = i;
+	mov	ar7,r1
+;	main.c:438: for (j = i + 1; j < *n; j++) {
+	mov	ar6,r1
+	mov	a,r6
+	inc	a
+	mov	_alarm_arranger_min_idx_10000_64,a
+00112$:
+	mov	dpl,r2
+	mov	dph,r3
+	mov	b,r4
+	lcall	__gptrget
+	mov	r5,a
+	clr	c
+	mov	a,_alarm_arranger_min_idx_10000_64
+	subb	a,r5
+	jc	00190$
+	ljmp	00105$
+00190$:
+;	main.c:439: if (hours[j] < hours[min_idx] || (hours[j] == hours[min_idx] && minutes[j] < minutes[min_idx])) {
+	push	ar2
+	push	ar3
+	push	ar4
+	mov	a,_alarm_arranger_min_idx_10000_64
+	add	a, _alarm_arranger_hours_10000_63
+	mov	r0,a
+	clr	a
+	addc	a, (_alarm_arranger_hours_10000_63 + 1)
+	mov	r5,a
+	mov	r6,(_alarm_arranger_hours_10000_63 + 2)
+	mov	dpl,r0
+	mov	dph,r5
+	mov	b,r6
+	lcall	__gptrget
+	mov	r6,a
+	mov	a,r7
+	add	a, _alarm_arranger_hours_10000_63
+	mov	r0,a
+	clr	a
+	addc	a, (_alarm_arranger_hours_10000_63 + 1)
+	mov	r4,a
+	mov	r5,(_alarm_arranger_hours_10000_63 + 2)
+	mov	dpl,r0
+	mov	dph,r4
+	mov	b,r5
+	lcall	__gptrget
+	mov	_alarm_arranger_sloc0_1_0,a
 	clr	c
 	mov	a,r6
-	subb	a,r7
-	jnc	00105$
-;	main.c:448: alarm_hours[i] = ds1307_read_ram(ALARM_RAM_BASE + (i * 2) + 1);
+	subb	a,_alarm_arranger_sloc0_1_0
+	pop	ar4
+	pop	ar3
+	pop	ar2
+	jc	00101$
 	mov	a,r6
-	add	a, #_alarm_hours
-	mov	r1,a
-	mov	ar5,r6
-	mov	a,r5
-	add	a,r5
+	cjne	a,_alarm_arranger_sloc0_1_0,00113$
+	push	ar2
+	push	ar3
+	push	ar4
+	mov	a,_alarm_arranger_min_idx_10000_64
+	add	a, _alarm_arranger_PARM_2
+	mov	r0,a
+	clr	a
+	addc	a, (_alarm_arranger_PARM_2 + 1)
 	mov	r5,a
-	add	a,#0x09
-	mov	dpl,a
+	mov	r6,(_alarm_arranger_PARM_2 + 2)
+	mov	dpl,r0
+	mov	dph,r5
+	mov	b,r6
+	lcall	__gptrget
+	mov	r0,a
+	mov	a,r7
+	add	a, _alarm_arranger_PARM_2
+	mov	r4,a
+	clr	a
+	addc	a, (_alarm_arranger_PARM_2 + 1)
+	mov	r5,a
+	mov	r6,(_alarm_arranger_PARM_2 + 2)
+	mov	dpl,r4
+	mov	dph,r5
+	mov	b,r6
+	lcall	__gptrget
+	mov	r4,a
+	clr	c
+	mov	a,r0
+	subb	a,r4
+	pop	ar4
+	pop	ar3
+	pop	ar2
+	jnc	00113$
+00101$:
+;	main.c:440: min_idx = j;
+	mov	r7,_alarm_arranger_min_idx_10000_64
+00113$:
+;	main.c:438: for (j = i + 1; j < *n; j++) {
+	inc	_alarm_arranger_min_idx_10000_64
+	ljmp	00112$
+00105$:
+;	main.c:444: unsigned temp = hours[i];
+	push	ar2
+	push	ar3
+	push	ar4
+	mov	a,r1
+	add	a, _alarm_arranger_hours_10000_63
+	mov	r0,a
+	clr	a
+	addc	a, (_alarm_arranger_hours_10000_63 + 1)
+	mov	r5,a
+	mov	r6,(_alarm_arranger_hours_10000_63 + 2)
+	mov	dpl,r0
+	mov	dph,r5
+	mov	b,r6
+	lcall	__gptrget
+	mov	_alarm_arranger_sloc0_1_0, a
+;	main.c:445: hours[i] = hours[min_idx];
+	mov	a,r7
+	add	a, _alarm_arranger_hours_10000_63
+	mov	_alarm_arranger_sloc1_1_0,a
+	clr	a
+	addc	a, (_alarm_arranger_hours_10000_63 + 1)
+	mov	(_alarm_arranger_sloc1_1_0 + 1),a
+	mov	(_alarm_arranger_sloc1_1_0 + 2),(_alarm_arranger_hours_10000_63 + 2)
+	mov	dpl,_alarm_arranger_sloc1_1_0
+	mov	dph,(_alarm_arranger_sloc1_1_0 + 1)
+	mov	b,(_alarm_arranger_sloc1_1_0 + 2)
+	lcall	__gptrget
+	mov	dpl,r0
+	mov	dph,r5
+	mov	b,r6
+	lcall	__gptrput
+;	main.c:446: hours[min_idx] = temp;
+	mov	r4,_alarm_arranger_sloc0_1_0
+	mov	dpl,_alarm_arranger_sloc1_1_0
+	mov	dph,(_alarm_arranger_sloc1_1_0 + 1)
+	mov	b,(_alarm_arranger_sloc1_1_0 + 2)
+	mov	a,r4
+	lcall	__gptrput
+;	main.c:449: temp = minutes[i];
+	mov	a,r1
+	add	a, _alarm_arranger_PARM_2
+	mov	r4,a
+	clr	a
+	addc	a, (_alarm_arranger_PARM_2 + 1)
+	mov	r5,a
+	mov	r6,(_alarm_arranger_PARM_2 + 2)
+	mov	dpl,r4
+	mov	dph,r5
+	mov	b,r6
+	lcall	__gptrget
+	mov	_alarm_arranger_temp_30001_71, a
+;	main.c:450: minutes[i] = minutes[min_idx];
+	mov	a,r7
+	add	a, _alarm_arranger_PARM_2
+	mov	r0,a
+	clr	a
+	addc	a, (_alarm_arranger_PARM_2 + 1)
+	mov	r2,a
+	mov	r7,(_alarm_arranger_PARM_2 + 2)
+	mov	dpl,r0
+	mov	dph,r2
+	mov	b,r7
+	lcall	__gptrget
+	mov	dpl,r4
+	mov	dph,r5
+	mov	b,r6
+	lcall	__gptrput
+;	main.c:451: minutes[min_idx] = temp;
+	mov	r3,_alarm_arranger_temp_30001_71
+	mov	dpl,r0
+	mov	dph,r2
+	mov	b,r7
+	mov	a,r3
+	lcall	__gptrput
+;	main.c:436: for (i = 0; i < *n - 1; i++) {
+	inc	r1
+	pop	ar4
+	pop	ar3
+	pop	ar2
+	ljmp	00115$
+00106$:
+;	main.c:456: for (i = 1; i < *n; i++) {
+	mov	_alarm_arranger___index_10001_72,#0x01
+	mov	(_alarm_arranger___index_10001_72 + 1),#0x00
+	mov	_alarm_arranger_i_10000_64,#0x01
+00118$:
+	mov	dpl,r2
+	mov	dph,r3
+	mov	b,r4
+	lcall	__gptrget
+	mov	r1,a
+	clr	c
+	mov	a,_alarm_arranger_i_10000_64
+	subb	a,r1
+	jc	00195$
+	ljmp	00110$
+00195$:
+;	main.c:457: if (!(hours[i] == hours[__index - 1] && minutes[i] == minutes[__index - 1])) {
+	mov	a,_alarm_arranger_i_10000_64
+	add	a, _alarm_arranger_hours_10000_63
+	mov	r0,a
+	clr	a
+	addc	a, (_alarm_arranger_hours_10000_63 + 1)
+	mov	r1,a
+	mov	r7,(_alarm_arranger_hours_10000_63 + 2)
+	mov	dpl,r0
+	mov	dph,r1
+	mov	b,r7
+	lcall	__gptrget
+	mov	r0,a
+	mov	a,_alarm_arranger___index_10001_72
+	add	a,#0xff
+	mov	r6,a
+	mov	a,(_alarm_arranger___index_10001_72 + 1)
+	addc	a,#0xff
+	mov	r7,a
+	mov	a,r6
+	add	a, _alarm_arranger_hours_10000_63
+	mov	r6,a
+	mov	a,r7
+	addc	a, (_alarm_arranger_hours_10000_63 + 1)
+	mov	r1,a
+	mov	r7,(_alarm_arranger_hours_10000_63 + 2)
+	mov	dpl,r6
+	mov	dph,r1
+	mov	b,r7
+	lcall	__gptrget
+	mov	r6,a
+	mov	a,r0
+	cjne	a,ar6,00107$
+	mov	a,_alarm_arranger_i_10000_64
+	add	a, _alarm_arranger_PARM_2
+	mov	r1,a
+	clr	a
+	addc	a, (_alarm_arranger_PARM_2 + 1)
+	mov	r6,a
+	mov	r7,(_alarm_arranger_PARM_2 + 2)
+	mov	dpl,r1
+	mov	dph,r6
+	mov	b,r7
+	lcall	__gptrget
+	mov	r1,a
+	mov	a,_alarm_arranger___index_10001_72
+	add	a,#0xff
+	mov	r6,a
+	mov	a,(_alarm_arranger___index_10001_72 + 1)
+	addc	a,#0xff
+	mov	r7,a
+	mov	a,r6
+	add	a, _alarm_arranger_PARM_2
+	mov	r6,a
+	mov	a,r7
+	addc	a, (_alarm_arranger_PARM_2 + 1)
+	mov	r0,a
+	mov	r7,(_alarm_arranger_PARM_2 + 2)
+	mov	dpl,r6
+	mov	dph,r0
+	mov	b,r7
+	lcall	__gptrget
+	mov	r6,a
+	mov	a,r1
+	cjne	a,ar6,00198$
+	sjmp	00119$
+00198$:
+00107$:
+;	main.c:458: hours[__index] = hours[i];
+	push	ar2
+	push	ar3
+	push	ar4
+	mov	a,_alarm_arranger___index_10001_72
+	add	a, _alarm_arranger_hours_10000_63
+	mov	r1,a
+	mov	a,(_alarm_arranger___index_10001_72 + 1)
+	addc	a, (_alarm_arranger_hours_10000_63 + 1)
+	mov	r6,a
+	mov	r7,(_alarm_arranger_hours_10000_63 + 2)
+	mov	a,_alarm_arranger_i_10000_64
+	add	a, _alarm_arranger_hours_10000_63
+	mov	r0,a
+	clr	a
+	addc	a, (_alarm_arranger_hours_10000_63 + 1)
+	mov	r4,a
+	mov	r5,(_alarm_arranger_hours_10000_63 + 2)
+	mov	dpl,r0
+	mov	dph,r4
+	mov	b,r5
+	lcall	__gptrget
+	mov	dpl,r1
+	mov	dph,r6
+	mov	b,r7
+	lcall	__gptrput
+;	main.c:459: minutes[__index] = minutes[i];
+	mov	a,_alarm_arranger___index_10001_72
+	add	a, _alarm_arranger_PARM_2
+	mov	r5,a
+	mov	a,(_alarm_arranger___index_10001_72 + 1)
+	addc	a, (_alarm_arranger_PARM_2 + 1)
+	mov	r6,a
+	mov	r7,(_alarm_arranger_PARM_2 + 2)
+	mov	a,_alarm_arranger_i_10000_64
+	add	a, _alarm_arranger_PARM_2
+	mov	r2,a
+	clr	a
+	addc	a, (_alarm_arranger_PARM_2 + 1)
+	mov	r3,a
+	mov	r4,(_alarm_arranger_PARM_2 + 2)
+	mov	dpl,r2
+	mov	dph,r3
+	mov	b,r4
+	lcall	__gptrget
+	mov	dpl,r5
+	mov	dph,r6
+	mov	b,r7
+	lcall	__gptrput
+;	main.c:460: __index++;
+	inc	_alarm_arranger___index_10001_72
+	clr	a
+	cjne	a,_alarm_arranger___index_10001_72,00199$
+	inc	(_alarm_arranger___index_10001_72 + 1)
+00199$:
+;	main.c:465: *n = __index;
+	pop	ar4
+	pop	ar3
+	pop	ar2
+;	main.c:460: __index++;
+00119$:
+;	main.c:456: for (i = 1; i < *n; i++) {
+	inc	_alarm_arranger_i_10000_64
+	ljmp	00118$
+00110$:
+;	main.c:465: *n = __index;
+	mov	r6,_alarm_arranger___index_10001_72
+	mov	dpl,r2
+	mov	dph,r3
+	mov	b,r4
+	mov	a,r6
+;	main.c:467: }
+	ljmp	__gptrput
+;------------------------------------------------------------
+;Allocation info for local variables in function 'ds3232_set_alarm1'
+;------------------------------------------------------------
+;min           Allocated with name '_ds3232_set_alarm1_PARM_2'
+;sec           Allocated with name '_ds3232_set_alarm1_PARM_3'
+;hrs           Allocated to registers r7 
+;bcd_sec       Allocated to registers r6 
+;bcd_min       Allocated to registers r5 
+;bcd_hrs       Allocated to registers r7 
+;------------------------------------------------------------
+;	main.c:469: void ds3232_set_alarm1(unsigned char hrs, unsigned char min, unsigned char sec) {
+;	-----------------------------------------
+;	 function ds3232_set_alarm1
+;	-----------------------------------------
+_ds3232_set_alarm1:
+	mov	r7, dpl
+;	main.c:471: unsigned char bcd_sec = dec_to_bcd(sec);
+	mov	dpl, _ds3232_set_alarm1_PARM_3
+	push	ar7
+	lcall	_dec_to_bcd
+	mov	r6, dpl
+;	main.c:472: unsigned char bcd_min = dec_to_bcd(min);
+	mov	dpl, _ds3232_set_alarm1_PARM_2
+	push	ar6
+	lcall	_dec_to_bcd
+	mov	r5, dpl
+	pop	ar6
+	pop	ar7
+;	main.c:473: unsigned char bcd_hrs = dec_to_bcd(hrs);
+	mov	dpl, r7
+	push	ar6
+	push	ar5
+	lcall	_dec_to_bcd
+	mov	r7, dpl
+	pop	ar5
+	pop	ar6
+;	main.c:476: i2c_start();
 	push	ar7
 	push	ar6
 	push	ar5
-	push	ar1
-	lcall	_ds1307_read_ram
-	mov	a, dpl
-	pop	ar1
+	lcall	_i2c_start
+;	main.c:477: i2c_write((DS3232_ADDRESS << 1) | 0);  // Write mode
+	mov	dpl, #0xd0
+	lcall	_i2c_write
+;	main.c:478: i2c_write(0x07); // Alarm1 register start
+	mov	dpl, #0x07
+	lcall	_i2c_write
 	pop	ar5
 	pop	ar6
-	mov	@r1,a
-;	main.c:449: alarm_minutes[i] = ds1307_read_ram(ALARM_RAM_BASE + (i * 2) + 2);
-	mov	a,r6
-	add	a, #_alarm_minutes
-	mov	r1,a
-	mov	a,#0x0a
-	add	a, r5
+;	main.c:480: i2c_write(bcd_sec & 0x7F);      // A1 Seconds, A1M1 = 0
+	mov	a,#0x7f
+	anl	a,r6
 	mov	dpl,a
-	push	ar6
-	push	ar1
-	lcall	_ds1307_read_ram
-	mov	a, dpl
-	pop	ar1
-	pop	ar6
+	push	ar5
+	lcall	_i2c_write
+	pop	ar5
+;	main.c:481: i2c_write(bcd_min & 0x7F);      // A1 Minutes, A1M2 = 0
+	mov	a,#0x7f
+	anl	a,r5
+	mov	dpl,a
+	lcall	_i2c_write
 	pop	ar7
-	mov	@r1,a
-;	main.c:447: for (unsigned char i = 0; i < count_; i++) {
-	inc	r6
-	sjmp	00103$
-00105$:
-;	main.c:451: }
-	ret
+;	main.c:482: i2c_write(bcd_hrs & 0x7F);      // A1 Hours, A1M3 = 0
+	mov	a,#0x7f
+	anl	a,r7
+	mov	dpl,a
+	lcall	_i2c_write
+;	main.c:483: i2c_write(0x80);                // A1 Day/Date, A1M4 = 1 (donÃ¢â‚¬â„¢t care about day/date)
+	mov	dpl, #0x80
+	lcall	_i2c_write
+;	main.c:484: i2c_stop();
+	lcall	_i2c_stop
+;	main.c:487: i2c_start();
+	lcall	_i2c_start
+;	main.c:488: i2c_write((DS3232_ADDRESS << 1) | 0);
+	mov	dpl, #0xd0
+	lcall	_i2c_write
+;	main.c:489: i2c_write(0x0E); // Control register
+	mov	dpl, #0x0e
+	lcall	_i2c_write
+;	main.c:490: i2c_write(0x05); // 00000101 => A1IE = 1, INTCN = 1
+	mov	dpl, #0x05
+	lcall	_i2c_write
+;	main.c:491: i2c_stop();
+	lcall	_i2c_stop
+;	main.c:494: i2c_start();
+	lcall	_i2c_start
+;	main.c:495: i2c_write((DS3232_ADDRESS << 1) | 0);
+	mov	dpl, #0xd0
+	lcall	_i2c_write
+;	main.c:496: i2c_write(0x0F); // Status register
+	mov	dpl, #0x0f
+	lcall	_i2c_write
+;	main.c:497: i2c_write(0x00); // Clear A1F
+	mov	dpl, #0x00
+	lcall	_i2c_write
+;	main.c:498: i2c_stop();
+;	main.c:499: }
+	ljmp	_i2c_stop
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'set_clock'
 ;------------------------------------------------------------
-;	main.c:453: void set_clock() {
+;	main.c:501: void set_clock() {
 ;	-----------------------------------------
 ;	 function set_clock
 ;	-----------------------------------------
 _set_clock:
-;	main.c:454: index = 0;
+;	main.c:502: idle_counter = 0;
 	clr	a
+	mov	_idle_counter,a
+	mov	(_idle_counter + 1),a
+;	main.c:503: index = 0;
 	mov	_index,a
 	mov	(_index + 1),a
-;	main.c:455: display(time_date[0], time_date[1], time_date[2], time_date[4], time_date[5], time_date[6], time_date[3] + 1);
+;	main.c:504: display(time_date[0], time_date[1], time_date[2], time_date[4], time_date[5], time_date[6], time_date[3] + 1);
 	mov	dpl,_time_date
 	mov	_display_PARM_2,(_time_date + 0x0001)
 	mov	_display_PARM_3,(_time_date + 0x0002)
@@ -2282,7 +2726,7 @@ _set_clock:
 	inc	a
 	mov	_display_PARM_7,a
 	lcall	_display
-;	main.c:457: while (index < 7) {
+;	main.c:506: while (index < 7) {
 00116$:
 	clr	c
 	mov	a,_index
@@ -2293,21 +2737,21 @@ _set_clock:
 	jc	00177$
 	ljmp	00118$
 00177$:
-;	main.c:458: delay(10000);
+;	main.c:507: delay(10000);
 	mov	dptr,#0x2710
 	lcall	_delay
-;	main.c:459: if (!up) {
+;	main.c:508: if (!up) {
 	jb	_up,00104$
-;	main.c:460: delay(10000); // debounce
+;	main.c:509: delay(10000); // debounce
 	mov	dptr,#0x2710
 	lcall	_delay
-;	main.c:461: time_date[index]++;
+;	main.c:510: time_date[index]++;
 	mov	a,_index
 	add	a, #_time_date
 	mov	r1,a
 	inc	@r1
 	mov	a,@r1
-;	main.c:462: if (time_date[index] >= max_vals[index]) {
+;	main.c:511: if (time_date[index] >= max_vals[index]) {
 	mov	a,_index
 	add	a, #_time_date
 	mov	r1,a
@@ -2320,14 +2764,14 @@ _set_clock:
 	mov	a,r7
 	subb	a,r6
 	jc	00102$
-;	main.c:463: time_date[index] = min_vals[index];
+;	main.c:512: time_date[index] = min_vals[index];
 	mov	a,_index
 	add	a, #_min_vals
 	mov	r0,a
 	mov	ar7,@r0
 	mov	@r1,ar7
 00102$:
-;	main.c:465: display(time_date[0], time_date[1], time_date[2], time_date[4], time_date[5], time_date[6], time_date[3] + 1);
+;	main.c:514: display(time_date[0], time_date[1], time_date[2], time_date[4], time_date[5], time_date[6], time_date[3] + 1);
 	mov	dpl,_time_date
 	mov	_display_PARM_2,(_time_date + 0x0001)
 	mov	_display_PARM_3,(_time_date + 0x0002)
@@ -2338,17 +2782,17 @@ _set_clock:
 	inc	a
 	mov	_display_PARM_7,a
 	lcall	_display
-;	main.c:466: idle_counter = 0;
+;	main.c:515: idle_counter = 0;
 	clr	a
 	mov	_idle_counter,a
 	mov	(_idle_counter + 1),a
 00104$:
-;	main.c:469: if (!down) {
+;	main.c:518: if (!down) {
 	jb	_down,00109$
-;	main.c:470: delay(10000); // debounce
+;	main.c:519: delay(10000); // debounce
 	mov	dptr,#0x2710
 	lcall	_delay
-;	main.c:471: if (time_date[index] <= min_vals[index]) {
+;	main.c:520: if (time_date[index] <= min_vals[index]) {
 	mov	a,_index
 	add	a, #_time_date
 	mov	r1,a
@@ -2361,7 +2805,7 @@ _set_clock:
 	mov	a,r6
 	subb	a,r7
 	jc	00106$
-;	main.c:472: time_date[index] = max_vals[index] - 1;
+;	main.c:521: time_date[index] = max_vals[index] - 1;
 	mov	a,_index
 	add	a, #_max_vals
 	mov	r0,a
@@ -2370,12 +2814,12 @@ _set_clock:
 	mov	@r1,a
 	sjmp	00107$
 00106$:
-;	main.c:474: time_date[index]--;
+;	main.c:523: time_date[index]--;
 	mov	a,@r1
 	dec	a
 	mov	@r1,a
 00107$:
-;	main.c:476: display(time_date[0], time_date[1], time_date[2], time_date[4], time_date[5], time_date[6], time_date[3] + 1);
+;	main.c:525: display(time_date[0], time_date[1], time_date[2], time_date[4], time_date[5], time_date[6], time_date[3] + 1);
 	mov	dpl,_time_date
 	mov	_display_PARM_2,(_time_date + 0x0001)
 	mov	_display_PARM_3,(_time_date + 0x0002)
@@ -2386,44 +2830,44 @@ _set_clock:
 	inc	a
 	mov	_display_PARM_7,a
 	lcall	_display
-;	main.c:477: idle_counter = 0;
+;	main.c:526: idle_counter = 0;
 	clr	a
 	mov	_idle_counter,a
 	mov	(_idle_counter + 1),a
 00109$:
-;	main.c:480: if (!next) {
+;	main.c:529: if (!next) {
 	jb	_next,00111$
-;	main.c:481: delay(10000); // debounce
+;	main.c:530: delay(10000); // debounce
 	mov	dptr,#0x2710
 	lcall	_delay
-;	main.c:482: index = index+1;
+;	main.c:531: index = index+1;
 	inc	_index
 	clr	a
 	cjne	a,_index,00183$
 	inc	(_index + 1)
 00183$:
-;	main.c:483: idle_counter = 0;
+;	main.c:532: idle_counter = 0;
 	clr	a
 	mov	_idle_counter,a
 	mov	(_idle_counter + 1),a
 00111$:
-;	main.c:486: if (!back) {
+;	main.c:535: if (!back) {
 	jb	_back,00113$
-;	main.c:487: delay(10000); // debounce
+;	main.c:536: delay(10000); // debounce
 	mov	dptr,#0x2710
 	lcall	_delay
-;	main.c:488: index = index-1;
+;	main.c:537: index = index-1;
 	dec	_index
 	mov	a,#0xff
 	cjne	a,_index,00185$
 	dec	(_index + 1)
 00185$:
-;	main.c:489: idle_counter = 0;
+;	main.c:538: idle_counter = 0;
 	clr	a
 	mov	_idle_counter,a
 	mov	(_idle_counter + 1),a
 00113$:
-;	main.c:491: if (++idle_counter >30) {
+;	main.c:540: if (++idle_counter >30) {
 	inc	_idle_counter
 	clr	a
 	cjne	a,_idle_counter,00186$
@@ -2437,180 +2881,184 @@ _set_clock:
 	jc	00187$
 	ljmp	00116$
 00187$:
-;	main.c:492: break;
+;	main.c:541: break;
 00118$:
-;	main.c:495: if (idle_counter <= 30) {
+;	main.c:544: if (idle_counter <= 30) {
 	clr	c
 	mov	a,#0x1e
 	subb	a,_idle_counter
 	clr	a
 	subb	a,(_idle_counter + 1)
 	jc	00120$
-;	main.c:496: ds1307_set_time_date(time_date[0], time_date[1], time_date[2], time_date[3] + 1, time_date[4], time_date[5], time_date[6]);
+;	main.c:545: ds3232_set_time_date(time_date[0], time_date[1], time_date[2], time_date[3] + 1, time_date[4], time_date[5], time_date[6]);
 	mov	dpl,_time_date
-	mov	_ds1307_set_time_date_PARM_2,(_time_date + 0x0001)
-	mov	_ds1307_set_time_date_PARM_3,(_time_date + 0x0002)
+	mov	_ds3232_set_time_date_PARM_2,(_time_date + 0x0001)
+	mov	_ds3232_set_time_date_PARM_3,(_time_date + 0x0002)
 	mov	a,(_time_date + 0x0003)
 	inc	a
-	mov	_ds1307_set_time_date_PARM_4,a
-	mov	_ds1307_set_time_date_PARM_5,(_time_date + 0x0004)
-	mov	_ds1307_set_time_date_PARM_6,(_time_date + 0x0005)
-	mov	_ds1307_set_time_date_PARM_7,(_time_date + 0x0006)
-	lcall	_ds1307_set_time_date
+	mov	_ds3232_set_time_date_PARM_4,a
+	mov	_ds3232_set_time_date_PARM_5,(_time_date + 0x0004)
+	mov	_ds3232_set_time_date_PARM_6,(_time_date + 0x0005)
+	mov	_ds3232_set_time_date_PARM_7,(_time_date + 0x0006)
+	lcall	_ds3232_set_time_date
 00120$:
-;	main.c:499: idle_counter = 0;
+;	main.c:548: idle_counter = 0;
 	clr	a
 	mov	_idle_counter,a
 	mov	(_idle_counter + 1),a
-;	main.c:500: }
+;	main.c:549: }
 	ret
 ;------------------------------------------------------------
 ;Allocation info for local variables in function 'set_alarms'
 ;------------------------------------------------------------
 ;i             Allocated to registers r7 
+;total_mins    Allocated with name '_set_alarms_total_mins_10002_135'
+;total_mins1   Allocated with name '_set_alarms_total_mins1_50002_140'
+;total_mins2   Allocated to registers r6 r4 
+;sloc0         Allocated with name '_set_alarms_sloc0_1_0'
 ;------------------------------------------------------------
-;	main.c:503: void set_alarms() {
+;	main.c:551: void set_alarms() {
 ;	-----------------------------------------
 ;	 function set_alarms
 ;	-----------------------------------------
 _set_alarms:
-;	main.c:505: lcd_clear();
+;	main.c:552: idle_counter = 0;
+	clr	a
+	mov	_idle_counter,a
+	mov	(_idle_counter + 1),a
+;	main.c:555: lcd_clear();
 	lcall	_lcd_clear
-;	main.c:506: lcd_goto(0, 0);
+;	main.c:556: lcd_goto(0, 0);
 	mov	_lcd_goto_PARM_2,#0x00
 	mov	dpl, #0x00
 	lcall	_lcd_goto
-;	main.c:507: lcd_string(" How many alarms");
+;	main.c:557: lcd_string(" How many alarms");
 	mov	dptr,#___str_0
 	mov	b, #0x80
 	lcall	_lcd_string
-;	main.c:508: while (1) {
+;	main.c:558: while (1) {
 00114$:
-;	main.c:509: lcd_goto(1, 6);
+;	main.c:559: lcd_goto(1, 6);
 	mov	_lcd_goto_PARM_2,#0x06
 	mov	dpl, #0x01
 	lcall	_lcd_goto
-;	main.c:510: lcd_char(num_alarms + '0');
+;	main.c:560: lcd_char(num_alarms + '0');
 	mov	r7,_num_alarms
 	mov	a,#0x30
 	add	a, r7
 	mov	dpl,a
 	lcall	_lcd_char
-;	main.c:511: delay(10000);
+;	main.c:561: delay(10000);
 	mov	dptr,#0x2710
 	lcall	_delay
-;	main.c:513: if (!up) {
+;	main.c:563: if (!up) {
 	jb	_up,00104$
-;	main.c:514: delay(10000);
+;	main.c:564: delay(10000);
 	mov	dptr,#0x2710
 	lcall	_delay
-;	main.c:515: if (num_alarms < NUM_ALARMS) num_alarms++;
+;	main.c:565: if (num_alarms < NUM_ALARMS) num_alarms++;
 	mov	a,#0x100 - 0x08
 	add	a,_num_alarms
 	jc	00102$
 	inc	_num_alarms
 00102$:
-;	main.c:516: idle_counter = 0;
+;	main.c:566: idle_counter = 0;
 	clr	a
 	mov	_idle_counter,a
 	mov	(_idle_counter + 1),a
 00104$:
-;	main.c:519: if (!down) {
+;	main.c:569: if (!down) {
 	jb	_down,00108$
-;	main.c:520: delay(10000);
+;	main.c:570: delay(10000);
 	mov	dptr,#0x2710
 	lcall	_delay
-;	main.c:521: if (num_alarms > 1) num_alarms--;
+;	main.c:571: if (num_alarms > 1) num_alarms--;
 	mov	a,_num_alarms
 	add	a,#0xff - 0x01
 	jnc	00106$
 	dec	_num_alarms
 00106$:
-;	main.c:522: idle_counter = 0;
+;	main.c:572: idle_counter = 0;
 	clr	a
 	mov	_idle_counter,a
 	mov	(_idle_counter + 1),a
 00108$:
-;	main.c:525: if (!next) {
+;	main.c:575: if (!next) {
 	jb	_next,00110$
-;	main.c:526: delay(10000);
+;	main.c:576: delay(10000);
 	mov	dptr,#0x2710
 	lcall	_delay
-;	main.c:527: ds1307_write_ram(0x08, num_alarms);
-	mov	_ds1307_write_ram_PARM_2,_num_alarms
-	mov	dpl, #0x08
-	lcall	_ds1307_write_ram
-;	main.c:528: break;
-	sjmp	00174$
+;	main.c:577: break;
+	sjmp	00189$
 00110$:
-;	main.c:531: if (++idle_counter > 30) {
+;	main.c:580: if (++idle_counter > 30) {
 	inc	_idle_counter
 	clr	a
-	cjne	a,_idle_counter,00295$
+	cjne	a,_idle_counter,00354$
 	inc	(_idle_counter + 1)
-00295$:
+00354$:
 	clr	c
 	mov	a,#0x1e
 	subb	a,_idle_counter
 	clr	a
 	subb	a,(_idle_counter + 1)
 	jnc	00114$
-;	main.c:532: lcd_clear();
+;	main.c:581: lcd_clear();
 	lcall	_lcd_clear
-;	main.c:533: lcd_goto(0,0);
+;	main.c:582: lcd_goto(0,0);
 	mov	_lcd_goto_PARM_2,#0x00
 	mov	dpl, #0x00
 	lcall	_lcd_goto
-;	main.c:534: lcd_string(" Time limit exc!");
+;	main.c:583: lcd_string(" Time limit exc!");
 	mov	dptr,#___str_1
 	mov	b, #0x80
 	lcall	_lcd_string
-;	main.c:535: delay_ms(3000);
+;	main.c:584: delay_ms(3000);
 	mov	dptr,#0x0bb8
 	lcall	_delay_ms
-;	main.c:536: lcd_clear();
+;	main.c:585: lcd_clear();
 	lcall	_lcd_clear
-;	main.c:537: idle_counter = 0;
+;	main.c:586: idle_counter = 0;
 	clr	a
 	mov	_idle_counter,a
 	mov	(_idle_counter + 1),a
-;	main.c:538: return;  //time exceeded
+;	main.c:587: return;  //time exceeded
 	ret
-;	main.c:543: for (unsigned char i = 0; i < num_alarms; i++) {
-00174$:
+;	main.c:592: for (i = 0; i < num_alarms; i++) {
+00189$:
 	mov	r7,#0x00
-00144$:
+00153$:
 	clr	c
 	mov	a,r7
 	subb	a,_num_alarms
-	jc	00297$
+	jc	00356$
 	ljmp	00142$
-00297$:
-;	main.c:544: idle_counter = 0;
+00356$:
+;	main.c:593: idle_counter = 0;
 	clr	a
 	mov	_idle_counter,a
 	mov	(_idle_counter + 1),a
-;	main.c:547: lcd_clear();
+;	main.c:596: lcd_clear();
 	push	ar7
 	lcall	_lcd_clear
-;	main.c:548: lcd_goto(0, 0);
+;	main.c:597: lcd_goto(0, 0);
 	mov	_lcd_goto_PARM_2,#0x00
 	mov	dpl, #0x00
 	lcall	_lcd_goto
-;	main.c:549: lcd_string(" Set Hour Alarm ");
+;	main.c:598: lcd_string(" Set Hour Alarm ");
 	mov	dptr,#___str_2
 	mov	b, #0x80
 	lcall	_lcd_string
-;	main.c:550: lcd_goto(1, 0);
+;	main.c:599: lcd_goto(1, 0);
 	mov	_lcd_goto_PARM_2,#0x00
 	mov	dpl, #0x01
 	lcall	_lcd_goto
-;	main.c:551: lcd_string("Alarm ");
+;	main.c:600: lcd_string("Alarm ");
 	mov	dptr,#___str_3
 	mov	b, #0x80
 	lcall	_lcd_string
 	pop	ar7
-;	main.c:552: lcd_char('1' + i);
+;	main.c:601: lcd_char('1' + i);
 	mov	ar6,r7
 	mov	a,#0x31
 	add	a, r6
@@ -2618,34 +3066,34 @@ _set_alarms:
 	push	ar7
 	lcall	_lcd_char
 	pop	ar7
-;	main.c:554: while (1) {
+;	main.c:603: while (1) {
 00127$:
-;	main.c:555: lcd_goto(1, 9);
+;	main.c:604: lcd_goto(1, 9);
 	mov	_lcd_goto_PARM_2,#0x09
 	mov	dpl, #0x01
 	push	ar7
 	lcall	_lcd_goto
-;	main.c:556: int_to_str(hr, buf);
+;	main.c:605: int_to_str(hr, buf);
 	mov	_int_to_str_PARM_2,#_buf
 	mov	(_int_to_str_PARM_2 + 1),#0x00
 	mov	(_int_to_str_PARM_2 + 2),#0x40
 	mov	dpl, _hr
 	lcall	_int_to_str
-;	main.c:557: lcd_string(buf);
+;	main.c:606: lcd_string(buf);
 	mov	dptr,#_buf
 	mov	b, #0x40
 	lcall	_lcd_string
-;	main.c:558: delay(10000);
+;	main.c:607: delay(10000);
 	mov	dptr,#0x2710
 	lcall	_delay
 	pop	ar7
-;	main.c:560: if (!up) {
+;	main.c:609: if (!up) {
 	jb	_up,00117$
-;	main.c:561: delay(10000);
+;	main.c:610: delay(10000);
 	mov	dptr,#0x2710
 	push	ar7
 	lcall	_delay
-;	main.c:562: hr = (hr + 1) % 24;
+;	main.c:611: hr = (hr + 1) % 24;
 	mov	r5,_hr
 	mov	r6,#0x00
 	mov	dpl,r5
@@ -2657,110 +3105,110 @@ _set_alarms:
 	mov	r5, dpl
 	pop	ar7
 	mov	_hr,r5
-;	main.c:563: idle_counter = 0;
+;	main.c:612: idle_counter = 0;
 	clr	a
 	mov	_idle_counter,a
 	mov	(_idle_counter + 1),a
 00117$:
-;	main.c:565: if (!down) {
+;	main.c:614: if (!down) {
 	jb	_down,00119$
-;	main.c:566: delay(10000);
+;	main.c:615: delay(10000);
 	mov	dptr,#0x2710
 	push	ar7
 	lcall	_delay
 	pop	ar7
-;	main.c:567: hr = (hr == 0) ? 23 : hr - 1;
+;	main.c:616: hr = (hr == 0) ? 23 : hr - 1;
 	mov	a,_hr
-	jnz	00148$
+	jnz	00163$
 	mov	r5,#0x17
-	sjmp	00149$
-00148$:
+	sjmp	00164$
+00163$:
 	mov	r4,_hr
 	dec	r4
 	mov	a,r4
 	mov	r5,a
 	rlc	a
 	subb	a,acc
-00149$:
+00164$:
 	mov	_hr,r5
-;	main.c:568: idle_counter = 0;
+;	main.c:617: idle_counter = 0;
 	clr	a
 	mov	_idle_counter,a
 	mov	(_idle_counter + 1),a
 00119$:
-;	main.c:570: if (!next) {
+;	main.c:619: if (!next) {
 	jb	_next,00121$
-;	main.c:571: delay(10000);
+;	main.c:620: delay(10000);
 	mov	dptr,#0x2710
 	push	ar7
 	lcall	_delay
 	pop	ar7
-;	main.c:572: break;
+;	main.c:621: break;
 	sjmp	00128$
 00121$:
-;	main.c:574: if (!back) return;
+;	main.c:623: if (!back) return;
 	jb	_back,00123$
 	ret
 00123$:
-;	main.c:576: if (++idle_counter > 30) {
+;	main.c:625: if (++idle_counter > 30) {
 	inc	_idle_counter
 	clr	a
-	cjne	a,_idle_counter,00303$
+	cjne	a,_idle_counter,00362$
 	inc	(_idle_counter + 1)
-00303$:
+00362$:
 	clr	c
 	mov	a,#0x1e
 	subb	a,_idle_counter
 	clr	a
 	subb	a,(_idle_counter + 1)
-	jc	00304$
+	jc	00363$
 	ljmp	00127$
-00304$:
-;	main.c:577: lcd_clear();
+00363$:
+;	main.c:626: lcd_clear();
 	lcall	_lcd_clear
-;	main.c:578: lcd_goto(0,0);
+;	main.c:627: lcd_goto(0,0);
 	mov	_lcd_goto_PARM_2,#0x00
 	mov	dpl, #0x00
 	lcall	_lcd_goto
-;	main.c:579: lcd_string(" Time limit exc!");
+;	main.c:628: lcd_string(" Time limit exc!");
 	mov	dptr,#___str_1
 	mov	b, #0x80
 	lcall	_lcd_string
-;	main.c:580: delay_ms(3000);
+;	main.c:629: delay_ms(3000);
 	mov	dptr,#0x0bb8
 	lcall	_delay_ms
-;	main.c:581: idle_counter = 0;
+;	main.c:630: idle_counter = 0;
 	clr	a
 	mov	_idle_counter,a
 	mov	(_idle_counter + 1),a
-;	main.c:582: return;  //time exceeded
+;	main.c:631: return;  //time exceeded
 	ret
 00128$:
-;	main.c:587: idle_counter = 0;
+;	main.c:636: idle_counter = 0;
 	clr	a
 	mov	_idle_counter,a
 	mov	(_idle_counter + 1),a
-;	main.c:588: lcd_clear();
+;	main.c:637: lcd_clear();
 	push	ar7
 	lcall	_lcd_clear
-;	main.c:589: lcd_goto(0, 0);
+;	main.c:638: lcd_goto(0, 0);
 	mov	_lcd_goto_PARM_2,#0x00
 	mov	dpl, #0x00
 	lcall	_lcd_goto
-;	main.c:590: lcd_string(" Set Min Alarm ");
+;	main.c:639: lcd_string(" Set Min Alarm ");
 	mov	dptr,#___str_4
 	mov	b, #0x80
 	lcall	_lcd_string
-;	main.c:591: lcd_goto(1, 0);
+;	main.c:640: lcd_goto(1, 0);
 	mov	_lcd_goto_PARM_2,#0x00
 	mov	dpl, #0x01
 	lcall	_lcd_goto
-;	main.c:592: lcd_string("Alarm ");
+;	main.c:641: lcd_string("Alarm ");
 	mov	dptr,#___str_3
 	mov	b, #0x80
 	lcall	_lcd_string
 	pop	ar7
-;	main.c:593: lcd_char('1' + i);
+;	main.c:642: lcd_char('1' + i);
 	mov	ar6,r7
 	mov	a,#0x31
 	add	a, r6
@@ -2768,34 +3216,34 @@ _set_alarms:
 	push	ar7
 	lcall	_lcd_char
 	pop	ar7
-;	main.c:595: while (1) {
+;	main.c:644: while (1) {
 00140$:
-;	main.c:596: lcd_goto(1, 9);
+;	main.c:645: lcd_goto(1, 9);
 	mov	_lcd_goto_PARM_2,#0x09
 	mov	dpl, #0x01
 	push	ar7
 	lcall	_lcd_goto
-;	main.c:597: int_to_str(min, buf);
+;	main.c:646: int_to_str(min, buf);
 	mov	_int_to_str_PARM_2,#_buf
 	mov	(_int_to_str_PARM_2 + 1),#0x00
 	mov	(_int_to_str_PARM_2 + 2),#0x40
 	mov	dpl, _min
 	lcall	_int_to_str
-;	main.c:598: lcd_string(buf);
+;	main.c:647: lcd_string(buf);
 	mov	dptr,#_buf
 	mov	b, #0x40
 	lcall	_lcd_string
-;	main.c:599: delay(10000);
+;	main.c:648: delay(10000);
 	mov	dptr,#0x2710
 	lcall	_delay
 	pop	ar7
-;	main.c:601: if (!up) {
+;	main.c:650: if (!up) {
 	jb	_up,00130$
-;	main.c:602: delay(10000);
+;	main.c:651: delay(10000);
 	mov	dptr,#0x2710
 	push	ar7
 	lcall	_delay
-;	main.c:603: min = (min + 1) % 60;
+;	main.c:652: min = (min + 1) % 60;
 	mov	r5,_min
 	mov	r6,#0x00
 	mov	dpl,r5
@@ -2807,630 +3255,798 @@ _set_alarms:
 	mov	r5, dpl
 	pop	ar7
 	mov	_min,r5
-;	main.c:604: idle_counter = 0;
+;	main.c:653: idle_counter = 0;
 	clr	a
 	mov	_idle_counter,a
 	mov	(_idle_counter + 1),a
 00130$:
-;	main.c:606: if (!down) {
+;	main.c:655: if (!down) {
 	jb	_down,00132$
-;	main.c:607: delay(10000);
+;	main.c:656: delay(10000);
 	mov	dptr,#0x2710
 	push	ar7
 	lcall	_delay
 	pop	ar7
-;	main.c:608: min = (min == 0) ? 59 : min - 1;
+;	main.c:657: min = (min == 0) ? 59 : min - 1;
 	mov	a,_min
-	jnz	00150$
+	jnz	00165$
 	mov	r5,#0x3b
-	sjmp	00151$
-00150$:
+	sjmp	00166$
+00165$:
 	mov	r4,_min
 	dec	r4
 	mov	a,r4
 	mov	r5,a
 	rlc	a
 	subb	a,acc
-00151$:
+00166$:
 	mov	_min,r5
-;	main.c:609: idle_counter = 0;
+;	main.c:658: idle_counter = 0;
 	clr	a
 	mov	_idle_counter,a
 	mov	(_idle_counter + 1),a
 00132$:
-;	main.c:611: if (!next) {
+;	main.c:660: if (!next) {
 	jb	_next,00134$
-;	main.c:612: delay(10000);
+;	main.c:661: delay(10000);
 	mov	dptr,#0x2710
 	push	ar7
 	lcall	_delay
 	pop	ar7
-;	main.c:613: break;
+;	main.c:662: break;
 	sjmp	00141$
 00134$:
-;	main.c:615: if (!back) return;
+;	main.c:664: if (!back) return;
 	jb	_back,00136$
 	ret
 00136$:
-;	main.c:617: if (++idle_counter > 30) {
+;	main.c:666: if (++idle_counter > 30) {
 	inc	_idle_counter
 	clr	a
-	cjne	a,_idle_counter,00310$
+	cjne	a,_idle_counter,00369$
 	inc	(_idle_counter + 1)
-00310$:
+00369$:
 	clr	c
 	mov	a,#0x1e
 	subb	a,_idle_counter
 	clr	a
 	subb	a,(_idle_counter + 1)
-	jc	00311$
+	jc	00370$
 	ljmp	00140$
-00311$:
-;	main.c:618: lcd_clear();
+00370$:
+;	main.c:667: lcd_clear();
 	lcall	_lcd_clear
-;	main.c:619: lcd_goto(0,0);
+;	main.c:668: lcd_goto(0,0);
 	mov	_lcd_goto_PARM_2,#0x00
 	mov	dpl, #0x00
 	lcall	_lcd_goto
-;	main.c:620: lcd_string(" Time limit exc!");
+;	main.c:669: lcd_string(" Time limit exc!");
 	mov	dptr,#___str_1
 	mov	b, #0x80
 	lcall	_lcd_string
-;	main.c:621: delay_ms(3000);
+;	main.c:670: delay_ms(3000);
 	mov	dptr,#0x0bb8
 	lcall	_delay_ms
-;	main.c:622: idle_counter = 0;
+;	main.c:671: idle_counter = 0;
 	clr	a
 	mov	_idle_counter,a
 	mov	(_idle_counter + 1),a
-;	main.c:623: return;
+;	main.c:672: return;
 	ret
 00141$:
-;	main.c:627: alarm_hours[i] = hr;
+;	main.c:676: alarm_hours[i] = hr;
 	mov	a,r7
 	add	a, #_alarm_hours
 	mov	r0,a
 	mov	@r0,_hr
-;	main.c:628: alarm_minutes[i] = min;
+;	main.c:677: alarm_minutes[i] = min;
 	mov	a,r7
 	add	a, #_alarm_minutes
 	mov	r0,a
 	mov	@r0,_min
-;	main.c:629: write_alarm_to_ds1307(i, hr, min);
-	mov	_write_alarm_to_ds1307_PARM_2,_hr
-	mov	_write_alarm_to_ds1307_PARM_3,_min
-	mov	dpl, r7
+;	main.c:678: lcd_clear();
 	push	ar7
-	lcall	_write_alarm_to_ds1307
-;	main.c:631: lcd_clear();
 	lcall	_lcd_clear
-;	main.c:632: lcd_string(" Alarm Saved");
+;	main.c:679: lcd_string(" Alarm Saved");
 	mov	dptr,#___str_5
 	mov	b, #0x80
 	lcall	_lcd_string
-;	main.c:633: delay(25000);
+;	main.c:680: delay(25000);
 	mov	dptr,#0x61a8
 	lcall	_delay
 	pop	ar7
-;	main.c:543: for (unsigned char i = 0; i < num_alarms; i++) {
+;	main.c:592: for (i = 0; i < num_alarms; i++) {
 	inc	r7
-	ljmp	00144$
+	ljmp	00153$
 00142$:
-;	main.c:636: lcd_clear();
-	lcall	_lcd_clear
-;	main.c:637: lcd_string(" All Alarms Saved");
-	mov	dptr,#___str_6
-	mov	b, #0x80
-	lcall	_lcd_string
-;	main.c:638: delay(25000);
-	mov	dptr,#0x61a8
-	lcall	_delay
-;	main.c:639: lcd_clear();
-;	main.c:640: }
-	ljmp	_lcd_clear
-;------------------------------------------------------------
-;Allocation info for local variables in function 'touch'
-;------------------------------------------------------------
-;	main.c:642: void touch(void) __interrupt(2) {
-;	-----------------------------------------
-;	 function touch
-;	-----------------------------------------
-_touch:
-;	main.c:643: EX1 = 0;
-;	assignBit
-	clr	_EX1
-;	main.c:644: touch_sensor = 1;
-;	assignBit
-	setb	_touch_sensor
-;	main.c:645: EX1 = 1;
-;	assignBit
-	setb	_EX1
-;	main.c:646: }
-	reti
-;	eliminated unneeded mov psw,# (no regs used in bank)
-;	eliminated unneeded push/pop not_psw
-;	eliminated unneeded push/pop dpl
-;	eliminated unneeded push/pop dph
-;	eliminated unneeded push/pop b
-;	eliminated unneeded push/pop acc
-;------------------------------------------------------------
-;Allocation info for local variables in function 'check_alarms'
-;------------------------------------------------------------
-;m             Allocated with name '_check_alarms_PARM_2'
-;s             Allocated with name '_check_alarms_PARM_3'
-;h             Allocated to registers r7 
-;i             Allocated to registers r6 
-;j             Allocated with name '_check_alarms_j_10000_125'
-;k             Allocated to registers 
-;timeout       Allocated to registers r2 r3 
-;------------------------------------------------------------
-;	main.c:648: void check_alarms(unsigned char h, unsigned char m, unsigned char s) {
-;	-----------------------------------------
-;	 function check_alarms
-;	-----------------------------------------
-_check_alarms:
-	mov	r7, dpl
-;	main.c:651: for (i = 0; i < NUM_ALARMS; i++) {
-	mov	r6,#0x00
+;	main.c:682: alarm_arranger(alarm_hours, alarm_minutes, &num_alarms);
+	mov	_alarm_arranger_PARM_2,#_alarm_minutes
+	mov	(_alarm_arranger_PARM_2 + 1),#0x00
+	mov	(_alarm_arranger_PARM_2 + 2),#0x40
+	mov	_alarm_arranger_PARM_3,#_num_alarms
+	mov	(_alarm_arranger_PARM_3 + 1),#0x00
+	mov	(_alarm_arranger_PARM_3 + 2),#0x40
+	mov	dptr,#_alarm_hours
+	mov	b, #0x40
+	lcall	_alarm_arranger
+;	main.c:683: write_eeprom(EEPROM_BASE, num_alarms);
+	mov	_write_eeprom_PARM_2,_num_alarms
+	mov	dptr,#0x0000
+	lcall	_write_eeprom
+;	main.c:685: for(i = 0; i < num_alarms; i++) {
+	mov	r7,#0x00
+00156$:
 	clr	c
-	mov	a,_check_alarms_PARM_3
-	subb	a,#0x02
-	clr	a
-	rlc	a
-	mov	r5,a
-	mov	r4,#0x00
-00113$:
-;	main.c:652: if (h == alarm_hours[i] && m == alarm_minutes[i] && s < 2) {
-	mov	a,r4
+	mov	a,r7
+	subb	a,_num_alarms
+	jnc	00143$
+;	main.c:686: write_alarm_to_eeprom(i, alarm_hours[i], alarm_minutes[i]);
+	mov	a,r7
 	add	a, #_alarm_hours
 	mov	r1,a
-	mov	ar3,@r1
+	mov	_write_alarm_to_eeprom_PARM_2,@r1
 	mov	a,r7
-	cjne	a,ar3,00173$
-	sjmp	00174$
-00173$:
-	ljmp	00114$
-00174$:
-	mov	a,r4
 	add	a, #_alarm_minutes
 	mov	r1,a
-	mov	a,@r1
-	cjne	a,_check_alarms_PARM_2,00175$
-	sjmp	00176$
-00175$:
-	ljmp	00114$
-00176$:
-	mov	a,r5
-	jnz	00177$
-	ljmp	00114$
-00177$:
-;	main.c:653: lcd_clear();
-	push	ar6
-	lcall	_lcd_clear
-;	main.c:654: lcd_goto(0, 0);
-	mov	_lcd_goto_PARM_2,#0x00
-	mov	dpl, #0x00
-	lcall	_lcd_goto
-;	main.c:655: lcd_string(" Alarm ");
-	mov	dptr,#___str_7
-	mov	b, #0x80
-	lcall	_lcd_string
-	pop	ar6
-;	main.c:656: lcd_char('1' + i);  // Optional: Show which alarm triggered
-	mov	ar3,r6
-	mov	a,#0x31
-	add	a, r3
-	mov	dpl,a
-	lcall	_lcd_char
-;	main.c:657: lcd_goto(1, 0);
-	mov	_lcd_goto_PARM_2,#0x00
-	mov	dpl, #0x01
-	lcall	_lcd_goto
-;	main.c:658: lcd_string("Take Medicine");
-	mov	dptr,#___str_8
-	mov	b, #0x80
-	lcall	_lcd_string
-;	main.c:659: BUZZER = 1;
-;	assignBit
-	setb	_BUZZER
-;	main.c:660: k = ds1307_read_ram(0x3F);
-	mov	dpl, #0x3f
-	lcall	_ds1307_read_ram
-;	main.c:662: ds1307_write_ram(0x3F, j);
-	mov	_ds1307_write_ram_PARM_2,#0x00
-	mov	dpl, #0x3f
-	lcall	_ds1307_write_ram
-;	main.c:663: for(j = 0; j < STEPS; j++) {
-	mov	_check_alarms_j_10000_125,#0x00
-00111$:
-;	main.c:664: step_motor(j);
-	mov	r2,_check_alarms_j_10000_125
-	mov	r3,#0x00
-	mov	dpl, r2
-	mov	dph, r3
-	lcall	_step_motor
-;	main.c:665: delay_ms(3);  // Adjust delay for speed
-	mov	dptr,#0x0003
-	lcall	_delay_ms
-;	main.c:663: for(j = 0; j < STEPS; j++) {
-	inc	_check_alarms_j_10000_125
-	mov	a,#0x100 - 0x89
-	add	a,_check_alarms_j_10000_125
-	jnc	00111$
-;	main.c:667: IN1=0;
-;	assignBit
-	clr	_IN1
-;	main.c:668: IN2=0;
-;	assignBit
-	clr	_IN2
-;	main.c:669: IN3=0;
-;	assignBit
-	clr	_IN3
-;	main.c:670: IN4=0; // to save power
-;	assignBit
-	clr	_IN4
-;	main.c:674: while (down && timeout < 5000) {  // ~5 sec timeout
-	mov	r2,#0x00
-	mov	r3,#0x00
-00103$:
-	jnb	_down,00105$
-	clr	c
-	mov	a,r2
-	subb	a,#0x88
-	mov	a,r3
-	subb	a,#0x13
-	jnc	00105$
-;	main.c:675: delay_ms(1);
-	mov	dptr,#0x0001
-	push	ar3
-	push	ar2
-	lcall	_delay_ms
-	pop	ar2
-	pop	ar3
-;	main.c:676: timeout++;
-	inc	r2
-	cjne	r2,#0x00,00103$
-	inc	r3
-	sjmp	00103$
-00105$:
-;	main.c:679: lcd_clear();
-	lcall	_lcd_clear
-;	main.c:680: BUZZER = 0;
-;	assignBit
-	clr	_BUZZER
-;	main.c:681: break;  // Prevent multiple alarms triggering at once
-	ret
-00114$:
-;	main.c:651: for (i = 0; i < NUM_ALARMS; i++) {
-	inc	r4
-	mov	ar6,r4
-	cjne	r4,#0x08,00182$
-00182$:
-	jnc	00183$
-	ljmp	00113$
-00183$:
-;	main.c:684: }
-	ret
-;------------------------------------------------------------
-;Allocation info for local variables in function 'reset_motor_position'
-;------------------------------------------------------------
-;count         Allocated to registers 
-;total_steps   Allocated to registers 
-;correction_steps Allocated to registers r6 r7 
-;remainder     Allocated to registers r4 r5 
-;ii            Allocated to registers r4 r5 
-;------------------------------------------------------------
-;	main.c:686: void reset_motor_position(void) {
-;	-----------------------------------------
-;	 function reset_motor_position
-;	-----------------------------------------
-_reset_motor_position:
-;	main.c:691: count = ds1307_read_ram(0x3F);
-	mov	dpl, #0x3f
-	lcall	_ds1307_read_ram
-	mov	r7, dpl
-;	main.c:694: total_steps = (unsigned long)count * 137;
-	mov	__mulint_PARM_2,r7
+	mov	_write_alarm_to_eeprom_PARM_3,@r1
+	mov	dpl, r7
+	push	ar7
+	lcall	_write_alarm_to_eeprom
+	pop	ar7
+;	main.c:685: for(i = 0; i < num_alarms; i++) {
+	inc	r7
+	sjmp	00156$
+00143$:
+;	main.c:688: ds3232_get_time_date(&h, &m, &s, &day, &d, &mo, &y);
+	mov	_ds3232_get_time_date_PARM_2,#_m
+	mov	(_ds3232_get_time_date_PARM_2 + 1),#0x00
+	mov	(_ds3232_get_time_date_PARM_2 + 2),#0x40
+	mov	_ds3232_get_time_date_PARM_3,#_s
+	mov	(_ds3232_get_time_date_PARM_3 + 1),#0x00
+	mov	(_ds3232_get_time_date_PARM_3 + 2),#0x40
+	mov	_ds3232_get_time_date_PARM_4,#_day
+	mov	(_ds3232_get_time_date_PARM_4 + 1),#0x00
+	mov	(_ds3232_get_time_date_PARM_4 + 2),#0x40
+	mov	_ds3232_get_time_date_PARM_5,#_d
+	mov	(_ds3232_get_time_date_PARM_5 + 1),#0x00
+	mov	(_ds3232_get_time_date_PARM_5 + 2),#0x40
+	mov	_ds3232_get_time_date_PARM_6,#_mo
+	mov	(_ds3232_get_time_date_PARM_6 + 1),#0x00
+	mov	(_ds3232_get_time_date_PARM_6 + 2),#0x40
+	mov	_ds3232_get_time_date_PARM_7,#_y
+	mov	(_ds3232_get_time_date_PARM_7 + 1),#0x00
+	mov	(_ds3232_get_time_date_PARM_7 + 2),#0x40
+	mov	dptr,#_h
+	mov	b, #0x40
+	lcall	_ds3232_get_time_date
+;	main.c:689: int total_mins = (h*60)+m;
+	mov	__mulint_PARM_2,_h
 	mov	(__mulint_PARM_2 + 1),#0x00
-	mov	dptr,#0x0089
+	mov	dptr,#0x003c
 	lcall	__mulint
-	mov	a, dpl
-	mov	b, dph
-;	main.c:697: remainder = total_steps % 4096;
-	mov	r6,a
-	anl	b,#0x0f
-	mov	r7,b
-	mov	ar4,r6
-	mov	ar5,r7
-;	main.c:700: if (remainder != 0) {
-	mov	a,r6
-	orl	a,r7
-	jz	00103$
-;	main.c:701: correction_steps = 4096 - remainder;
-	clr	a
-	clr	c
-	subb	a,r4
-	mov	r6,a
-	mov	a,#0x10
-	subb	a,r5
-	mov	r7,a
-;	main.c:704: for(ii=0; ii<correction_steps; ii++) {
-	mov	r4,#0x00
+	mov	r6, dpl
+	mov	r7, dph
+	mov	r4,_m
 	mov	r5,#0x00
-00105$:
-	clr	c
 	mov	a,r4
-	subb	a,r6
+	add	a, r6
+	mov	_set_alarms_total_mins_10002_135,a
 	mov	a,r5
-	subb	a,r7
-	jnc	00101$
-;	main.c:705: step_motor(ii);
-	mov	dpl, r4
-	mov	dph, r5
+	addc	a, r7
+	mov	(_set_alarms_total_mins_10002_135 + 1),a
+;	main.c:691: if ((total_mins >= (alarm_hours[num_alarms - 1] * 60 + alarm_minutes[num_alarms - 1])) || (total_mins < (alarm_hours[0]*60 + alarm_minutes[0]))) {
+	mov	r5,_num_alarms
+	dec	r5
+	mov	a,r5
+	add	a, #_alarm_hours
+	mov	r1,a
+	mov	ar4,@r1
+	mov	__mulint_PARM_2,r4
+	mov	(__mulint_PARM_2 + 1),#0x00
+	mov	dptr,#0x003c
+	push	ar5
+	lcall	__mulint
+	mov	r3, dpl
+	mov	r4, dph
+	pop	ar5
+	mov	a,r5
+	add	a, #_alarm_minutes
+	mov	r1,a
+	mov	ar5,@r1
+	mov	r2,#0x00
+	mov	a,r5
+	add	a, r3
+	mov	r3,a
+	mov	a,r2
+	addc	a, r4
+	mov	r4,a
+	clr	c
+	mov	a,_set_alarms_total_mins_10002_135
+	subb	a,r3
+	mov	a,(_set_alarms_total_mins_10002_135 + 1)
+	xrl	a,#0x80
+	mov	b,r4
+	xrl	b,#0x80
+	subb	a,b
+	jnc	00148$
+	mov	r0,#_alarm_hours
+	mov	ar5,@r0
+	mov	__mulint_PARM_2,r5
+	mov	(__mulint_PARM_2 + 1),#0x00
+	mov	dptr,#0x003c
+	lcall	__mulint
+	mov	r4, dpl
+	mov	r5, dph
+	mov	r0,#_alarm_minutes
+	mov	ar3,@r0
+	mov	r2,#0x00
+	mov	a,r3
+	add	a, r4
+	mov	r4,a
+	mov	a,r2
+	addc	a, r5
+	mov	r5,a
+	clr	c
+	mov	a,_set_alarms_total_mins_10002_135
+	subb	a,r4
+	mov	a,(_set_alarms_total_mins_10002_135 + 1)
+	xrl	a,#0x80
+	mov	b,r5
+	xrl	b,#0x80
+	subb	a,b
+	jnc	00196$
+00148$:
+;	main.c:692: ds3232_set_alarm1(alarm_hours[0], alarm_minutes[0], 0);
+	mov	r0,#_alarm_hours
+	mov	dpl,@r0
+	mov	r0,#_alarm_minutes
+	mov	_ds3232_set_alarm1_PARM_2,@r0
+	mov	_ds3232_set_alarm1_PARM_3,#0x00
+	lcall	_ds3232_set_alarm1
+;	main.c:693: write_eeprom(0x003A, 0);
+	mov	_write_eeprom_PARM_2,#0x00
+	mov	dptr,#0x003a
+	lcall	_write_eeprom
+	ljmp	00150$
+;	main.c:697: for(i=0; i<num_alarms-1; i++){
+00196$:
+	mov	r5,#0x00
+00159$:
+	mov	r3,_num_alarms
+	mov	r4,#0x00
+	dec	r3
+	cjne	r3,#0xff,00374$
+	dec	r4
+00374$:
+	mov	_set_alarms_sloc0_1_0,r5
+	mov	(_set_alarms_sloc0_1_0 + 1),#0x00
+	clr	c
+	mov	a,_set_alarms_sloc0_1_0
+	subb	a,r3
+	mov	a,(_set_alarms_sloc0_1_0 + 1)
+	xrl	a,#0x80
+	mov	b,r4
+	xrl	b,#0x80
+	subb	a,b
+	jc	00375$
+	ljmp	00150$
+00375$:
+;	main.c:698: int total_mins1 = (alarm_hours[i]*60)+alarm_minutes[i];
+	mov	a,r5
+	add	a, #_alarm_hours
+	mov	r1,a
+	mov	ar4,@r1
+	mov	__mulint_PARM_2,r4
+	mov	(__mulint_PARM_2 + 1),#0x00
+	mov	dptr,#0x003c
+	push	ar5
+	lcall	__mulint
+	mov	r3, dpl
+	mov	r4, dph
+	pop	ar5
+	mov	a,r5
+	add	a, #_alarm_minutes
+	mov	r1,a
+	mov	ar2,@r1
+	mov	r7,#0x00
+	mov	a,r2
+	add	a, r3
+	mov	_set_alarms_total_mins1_50002_140,a
+	mov	a,r7
+	addc	a, r4
+	mov	(_set_alarms_total_mins1_50002_140 + 1),a
+;	main.c:699: int total_mins2 = (alarm_hours[i+1]*60)+alarm_minutes[i+1];
+	mov	ar7,r5
+	mov	a,r7
+	inc	a
+	mov	r6,a
+	add	a, #_alarm_hours
+	mov	r1,a
+	mov	ar2,@r1
+	mov	__mulint_PARM_2,r2
+	mov	(__mulint_PARM_2 + 1),#0x00
+	mov	dptr,#0x003c
 	push	ar7
 	push	ar6
 	push	ar5
-	push	ar4
-	lcall	_step_motor
-;	main.c:706: delay_ms(3);
-	mov	dptr,#0x0003
-	lcall	_delay_ms
-	pop	ar4
+	lcall	__mulint
+	mov	r2, dpl
+	mov	r4, dph
 	pop	ar5
 	pop	ar6
 	pop	ar7
-;	main.c:704: for(ii=0; ii<correction_steps; ii++) {
-	inc	r4
-	cjne	r4,#0x00,00105$
+	mov	a,r6
+	add	a, #_alarm_minutes
+	mov	r1,a
+	mov	ar6,@r1
+	mov	r3,#0x00
+	mov	a,r6
+	add	a, r2
+	mov	r6,a
+	mov	a,r3
+	addc	a, r4
+	mov	r4,a
+;	main.c:700: if (total_mins>= total_mins1 && total_mins<total_mins2){
+	clr	c
+	mov	a,_set_alarms_total_mins_10002_135
+	subb	a,_set_alarms_total_mins1_50002_140
+	mov	a,(_set_alarms_total_mins_10002_135 + 1)
+	xrl	a,#0x80
+	mov	b,(_set_alarms_total_mins1_50002_140 + 1)
+	xrl	b,#0x80
+	subb	a,b
+	jc	00160$
+	mov	a,_set_alarms_total_mins_10002_135
+	subb	a,r6
+	mov	a,(_set_alarms_total_mins_10002_135 + 1)
+	xrl	a,#0x80
+	mov	b,r4
+	xrl	b,#0x80
+	subb	a,b
+	jnc	00160$
+;	main.c:701: ds3232_set_alarm1(alarm_hours[i+1], alarm_minutes[i+1], 0);
+	inc	r7
+	mov	a,r7
+	add	a, #_alarm_hours
+	mov	r1,a
+	mov	dpl,@r1
+	mov	a,r7
+	add	a, #_alarm_minutes
+	mov	r1,a
+	mov	_ds3232_set_alarm1_PARM_2,@r1
+	mov	_ds3232_set_alarm1_PARM_3,#0x00
+	push	ar5
+	lcall	_ds3232_set_alarm1
+;	main.c:702: write_eeprom(0x003A, (i+1)%num_alarms);
+	mov	dpl,_set_alarms_sloc0_1_0
+	mov	dph,(_set_alarms_sloc0_1_0 + 1)
+	inc	dptr
+	mov	__modsint_PARM_2,_num_alarms
+	mov	(__modsint_PARM_2 + 1),#0x00
+	lcall	__modsint
+	mov	r6, dpl
+	mov	_write_eeprom_PARM_2,r6
+	mov	dptr,#0x003a
+	lcall	_write_eeprom
+	pop	ar5
+00160$:
+;	main.c:697: for(i=0; i<num_alarms-1; i++){
 	inc	r5
-	sjmp	00105$
-00101$:
-;	main.c:708: IN1 = 0;
-;	assignBit
-	clr	_IN1
-;	main.c:709: IN2 = 0;
-;	assignBit
-	clr	_IN2
-;	main.c:710: IN3 = 0;
-;	assignBit
-	clr	_IN3
-;	main.c:711: IN4 = 0;
-;	assignBit
-	clr	_IN4
-00103$:
-;	main.c:715: ds1307_write_ram(0x3F, 0);
-	mov	_ds1307_write_ram_PARM_2,#0x00
-	mov	dpl, #0x3f
-;	main.c:716: }
-	ljmp	_ds1307_write_ram
-;------------------------------------------------------------
-;Allocation info for local variables in function 'main'
-;------------------------------------------------------------
-;checker       Allocated with name '_main_checker_10001_141'
-;------------------------------------------------------------
-;	main.c:719: void main() {
-;	-----------------------------------------
-;	 function main
-;	-----------------------------------------
-_main:
-;	main.c:720: EA  = 1;   // Enable global interrupts
-;	assignBit
-	setb	_EA
-;	main.c:721: EX0 = 1;   // Enable INT0 (P3.2)
-;	assignBit
-	setb	_EX0
-;	main.c:722: IT0 = 1;   // Set INT0 to edge-triggered
-;	assignBit
-	setb	_IT0
-;	main.c:723: EX1 = 1;   // Enable INT1 (P3.3)
-;	assignBit
-	setb	_EX1
-;	main.c:724: IT1 = 1;   // Set INT1 to edge-triggered
-;	assignBit
-	setb	_IT1
-;	main.c:726: lcd_init();  // initialize lcd
-	lcall	_lcd_init
-;	main.c:727: i2c_init();  // initialize i2c communication prototcol
-	lcall	_i2c_init
-;	main.c:728: ds1307_init();  //initialize ds1307 rtc
-	lcall	_ds1307_init
-;	main.c:729: num_alarms = ds1307_read_ram(0x08);
-	mov	dpl, #0x08
-	lcall	_ds1307_read_ram
-;	main.c:730: load_alarms_from_ds1307(num_alarms);
-	mov  _num_alarms,dpl
-	lcall	_load_alarms_from_ds1307
-;	main.c:731: BUZZER = 0;
-;	assignBit
-	clr	_BUZZER
-;	main.c:734: checker[0] = ds1307_read_ram(0x3B);
-	mov	dpl, #0x3b
-	lcall	_ds1307_read_ram
-	mov	a, dpl
-	mov	_main_checker_10001_141,a
-;	main.c:735: checker[1] = ds1307_read_ram(0x3C);
-	mov	dpl, #0x3c
-	lcall	_ds1307_read_ram
-	mov	a, dpl
-	mov	(_main_checker_10001_141 + 0x0001),a
-;	main.c:736: checker[2] = ds1307_read_ram(0x3D);
-	mov	dpl, #0x3d
-	lcall	_ds1307_read_ram
-	mov	a, dpl
-	mov	(_main_checker_10001_141 + 0x0002),a
-;	main.c:737: checker[3] = ds1307_read_ram(0x3E);
-	mov	dpl, #0x3e
-	lcall	_ds1307_read_ram
-	mov	a, dpl
-	mov	(_main_checker_10001_141 + 0x0003),a
-;	main.c:739: if(!(checker[0] == 'I' && checker[1] == 'N' && checker[2] == 'I' && checker[3] == 'T')) {
-	mov	a,#0x49
-	cjne	a,_main_checker_10001_141,00101$
-	mov	a,#0x4e
-	cjne	a,(_main_checker_10001_141 + 0x0001),00101$
-	mov	a,#0x49
-	cjne	a,(_main_checker_10001_141 + 0x0002),00101$
-	mov	a,#0x54
-	cjne	a,(_main_checker_10001_141 + 0x0003),00230$
-	sjmp	00130$
-00230$:
-00101$:
-;	main.c:740: ds1307_write_ram(0x3B, 'I');
-	mov	_ds1307_write_ram_PARM_2,#0x49
-	mov	dpl, #0x3b
-	lcall	_ds1307_write_ram
-;	main.c:741: ds1307_write_ram(0x3C, 'N');
-	mov	_ds1307_write_ram_PARM_2,#0x4e
-	mov	dpl, #0x3c
-	lcall	_ds1307_write_ram
-;	main.c:742: ds1307_write_ram(0x3D, 'I');
-	mov	_ds1307_write_ram_PARM_2,#0x49
-	mov	dpl, #0x3d
-	lcall	_ds1307_write_ram
-;	main.c:743: ds1307_write_ram(0x3E, 'T');
-	mov	_ds1307_write_ram_PARM_2,#0x54
-	mov	dpl, #0x3e
-	lcall	_ds1307_write_ram
-;	main.c:744: ds1307_write_ram(0x3F, 0x0);
-	mov	_ds1307_write_ram_PARM_2,#0x00
-	mov	dpl, #0x3f
-	lcall	_ds1307_write_ram
-;	main.c:748: while (1) {
-00130$:
-;	main.c:750: if (!RESET) {
-	jb	_RESET,00107$
-;	main.c:751: reset_motor_position();
-	lcall	_reset_motor_position
-00107$:
-;	main.c:755: if (!edit_mode && !touch_sensor) {
-	jb	_edit_mode,00126$
-	jb	_touch_sensor,00126$
-;	main.c:756: ds1307_get_time_date(&h, &m, &s, &day, &d, &mo, &y);
-	mov	_ds1307_get_time_date_PARM_2,#_m
-	mov	(_ds1307_get_time_date_PARM_2 + 1),#0x00
-	mov	(_ds1307_get_time_date_PARM_2 + 2),#0x40
-	mov	_ds1307_get_time_date_PARM_3,#_s
-	mov	(_ds1307_get_time_date_PARM_3 + 1),#0x00
-	mov	(_ds1307_get_time_date_PARM_3 + 2),#0x40
-	mov	_ds1307_get_time_date_PARM_4,#_day
-	mov	(_ds1307_get_time_date_PARM_4 + 1),#0x00
-	mov	(_ds1307_get_time_date_PARM_4 + 2),#0x40
-	mov	_ds1307_get_time_date_PARM_5,#_d
-	mov	(_ds1307_get_time_date_PARM_5 + 1),#0x00
-	mov	(_ds1307_get_time_date_PARM_5 + 2),#0x40
-	mov	_ds1307_get_time_date_PARM_6,#_mo
-	mov	(_ds1307_get_time_date_PARM_6 + 1),#0x00
-	mov	(_ds1307_get_time_date_PARM_6 + 2),#0x40
-	mov	_ds1307_get_time_date_PARM_7,#_y
-	mov	(_ds1307_get_time_date_PARM_7 + 1),#0x00
-	mov	(_ds1307_get_time_date_PARM_7 + 2),#0x40
-	mov	dptr,#_h
-	mov	b, #0x40
-	lcall	_ds1307_get_time_date
-;	main.c:758: check_alarms(h, m, s);
-	mov	_check_alarms_PARM_2,_m
-	mov	_check_alarms_PARM_3,_s
-	mov	dpl, _h
-	lcall	_check_alarms
-	sjmp	00130$
-00126$:
-;	main.c:762: else if (edit_mode) {
-	jnb	_edit_mode,00123$
-;	main.c:763: lcd_clear();
+	ljmp	00159$
+00150$:
+;	main.c:708: lcd_clear();
 	lcall	_lcd_clear
-;	main.c:764: lcd_goto(0,0);
+;	main.c:709: lcd_string(" All Alarms Saved");
+	mov	dptr,#___str_6
+	mov	b, #0x80
+	lcall	_lcd_string
+;	main.c:710: delay(25000);
+	mov	dptr,#0x61a8
+	lcall	_delay
+;	main.c:711: lcd_clear();
+;	main.c:712: }
+	ljmp	_lcd_clear
+;------------------------------------------------------------
+;Allocation info for local variables in function 'alarm_triggered'
+;------------------------------------------------------------
+;j             Allocated to registers r7 
+;k             Allocated to registers 
+;timeout       Allocated to registers r6 r7 
+;alarm_indx    Allocated to registers r6 
+;------------------------------------------------------------
+;	main.c:746: void alarm_triggered(void) __interrupt(0) {
+;	-----------------------------------------
+;	 function alarm_triggered
+;	-----------------------------------------
+_alarm_triggered:
+	push	bits
+	push	acc
+	push	b
+	push	dpl
+	push	dph
+	push	(0+7)
+	push	(0+6)
+	push	(0+5)
+	push	(0+4)
+	push	(0+3)
+	push	(0+2)
+	push	(0+1)
+	push	(0+0)
+	push	psw
+	mov	psw,#0x00
+;	main.c:747: EA = 0;
+;	assignBit
+	clr	_EA
+;	main.c:748: POWER_PULSE = 1;
+;	assignBit
+	setb	_POWER_PULSE
+;	main.c:749: lcd_init();
+	lcall	_lcd_init
+;	main.c:751: lcd_clear();
+	lcall	_lcd_clear
+;	main.c:752: lcd_goto(0, 0);
 	mov	_lcd_goto_PARM_2,#0x00
 	mov	dpl, #0x00
 	lcall	_lcd_goto
-;	main.c:765: lcd_string(" -> to set clock");
-	mov	dptr,#___str_9
+;	main.c:753: lcd_string(" Alarm Triggered");
+	mov	dptr,#___str_7
 	mov	b, #0x80
 	lcall	_lcd_string
-;	main.c:766: lcd_goto(1,0);
+;	main.c:754: lcd_goto(1, 0);
 	mov	_lcd_goto_PARM_2,#0x00
 	mov	dpl, #0x01
 	lcall	_lcd_goto
-;	main.c:767: lcd_string(" <- to set alarm");
-	mov	dptr,#___str_10
+;	main.c:755: lcd_string("Take Medicine");
+	mov	dptr,#___str_8
 	mov	b, #0x80
 	lcall	_lcd_string
-;	main.c:768: while(next && back);
-00109$:
-	jnb	_next,00111$
-	jb	_back,00109$
-00111$:
-;	main.c:769: lcd_clear();
+;	main.c:756: BUZZER = 1;
+;	assignBit
+	setb	_BUZZER
+;	main.c:757: k = read_eeprom(0x003F);
+	mov	dptr,#0x003f
+	lcall	_read_eeprom
+;	main.c:758: k = k+1;
+	mov	a,dpl
+	inc	a
+	mov	_write_eeprom_PARM_2,a
+;	main.c:759: write_eeprom(0x003F, k);
+	mov	dptr,#0x003f
+	lcall	_write_eeprom
+;	main.c:760: for(j = 0; j < STEPS; j++) {
+	mov	r7,#0x00
+00106$:
+;	main.c:761: step_motor(j);
+	mov	ar5,r7
+	mov	r6,#0x00
+	mov	dpl, r5
+	mov	dph, r6
+	push	ar7
+	lcall	_step_motor
+;	main.c:762: delay_ms(3);  // Adjust delay for speed
+	mov	dptr,#0x0003
+	lcall	_delay_ms
+	pop	ar7
+;	main.c:760: for(j = 0; j < STEPS; j++) {
+	inc	r7
+	cjne	r7,#0x89,00147$
+00147$:
+	jc	00106$
+;	main.c:764: IN1=0;
+;	assignBit
+	clr	_IN1
+;	main.c:765: IN2=0;
+;	assignBit
+	clr	_IN2
+;	main.c:766: IN3=0;
+;	assignBit
+	clr	_IN3
+;	main.c:767: IN4=0; // to save power
+;	assignBit
+	clr	_IN4
+;	main.c:770: while (down && timeout < 5000) {  // ~5 sec timeout
+	mov	r6,#0x00
+	mov	r7,#0x00
+00103$:
+	jnb	_down,00105$
+	clr	c
+	mov	a,r6
+	subb	a,#0x88
+	mov	a,r7
+	subb	a,#0x13
+	jnc	00105$
+;	main.c:771: delay_ms(1);
+	mov	dptr,#0x0001
+	push	ar7
+	push	ar6
+	lcall	_delay_ms
+	pop	ar6
+	pop	ar7
+;	main.c:772: timeout++;
+	inc	r6
+	cjne	r6,#0x00,00103$
+	inc	r7
+	sjmp	00103$
+00105$:
+;	main.c:774: lcd_clear();
 	lcall	_lcd_clear
-;	main.c:770: lcd_goto(0,0);
+;	main.c:775: BUZZER = 0;
+;	assignBit
+	clr	_BUZZER
+;	main.c:776: unsigned char alarm_indx = read_eeprom(0x003A);
+	mov	dptr,#0x003a
+	lcall	_read_eeprom
+;	main.c:777: alarm_indx = (alarm_indx+1)%num_alarms;
+	mov	r6,#0x00
+	mov	dph,r6
+	inc	dptr
+	mov	__modsint_PARM_2,_num_alarms
+	mov	(__modsint_PARM_2 + 1),r6
+	lcall	__modsint
+	mov	r6, dpl
+;	main.c:778: write_eeprom(0x003A, alarm_indx);
+	mov	_write_eeprom_PARM_2,r6
+	mov	dptr,#0x003a
+	push	ar6
+	lcall	_write_eeprom
+	pop	ar6
+;	main.c:779: hr = read_eeprom(EEPROM_BASE + ((alarm_indx) * 2) + 1);
+	mov	r7,#0x00
+	mov	a,r6
+	add	a,r6
+	mov	r6,a
+	mov	a,r7
+	rlc	a
+	mov	r7,a
+	mov	dpl,r6
+	mov	dph,r7
+	inc	dptr
+	push	ar7
+	push	ar6
+	lcall	_read_eeprom
+	mov	_hr,dpl
+	pop	ar6
+	pop	ar7
+;	main.c:780: min  = read_eeprom(EEPROM_BASE + ((alarm_indx) * 2) + 2);
+	mov	dpl,r6
+	mov	dph,r7
+	inc	dptr
+	inc	dptr
+	lcall	_read_eeprom
+	mov	_min,dpl
+;	main.c:781: ds3232_set_alarm1(hr, min, 0);
+	mov	_ds3232_set_alarm1_PARM_2,_min
+	mov	_ds3232_set_alarm1_PARM_3,#0x00
+	mov	dpl, _hr
+	lcall	_ds3232_set_alarm1
+;	main.c:782: POWER_PULSE = 0;
+;	assignBit
+	clr	_POWER_PULSE
+;	main.c:783: EA = 1;
+;	assignBit
+	setb	_EA
+;	main.c:784: PCON |= 0x02;
+	orl	_PCON,#0x02
+;	main.c:785: }
+	pop	psw
+	pop	(0+0)
+	pop	(0+1)
+	pop	(0+2)
+	pop	(0+3)
+	pop	(0+4)
+	pop	(0+5)
+	pop	(0+6)
+	pop	(0+7)
+	pop	dph
+	pop	dpl
+	pop	b
+	pop	acc
+	pop	bits
+	ljmp	sdcc_atomic_maybe_rollback
+;------------------------------------------------------------
+;Allocation info for local variables in function 'configuration'
+;------------------------------------------------------------
+;	main.c:787: void configuration(void) __interrupt(2) {
+;	-----------------------------------------
+;	 function configuration
+;	-----------------------------------------
+_configuration:
+	push	bits
+	push	acc
+	push	b
+	push	dpl
+	push	dph
+	push	(0+7)
+	push	(0+6)
+	push	(0+5)
+	push	(0+4)
+	push	(0+3)
+	push	(0+2)
+	push	(0+1)
+	push	(0+0)
+	push	psw
+	mov	psw,#0x00
+;	main.c:788: EA = 0;
+;	assignBit
+	clr	_EA
+;	main.c:789: POWER_PULSE = 1;
+;	assignBit
+	setb	_POWER_PULSE
+;	main.c:790: lcd_init();
+	lcall	_lcd_init
+;	main.c:791: lcd_clear();
+	lcall	_lcd_clear
+;	main.c:792: lcd_goto(0,0);
 	mov	_lcd_goto_PARM_2,#0x00
 	mov	dpl, #0x00
 	lcall	_lcd_goto
-;	main.c:771: if (!next) {
-	jb	_next,00115$
-;	main.c:772: delay(10000);
-	mov	dptr,#0x2710
-	lcall	_delay
-;	main.c:773: set_clock();
-	lcall	_set_clock
-	sjmp	00116$
-00115$:
-;	main.c:775: else if (!back) {
-	jb	_back,00116$
-;	main.c:776: delay(10000);
-	mov	dptr,#0x2710
-	lcall	_delay
-;	main.c:777: set_alarms();
-	lcall	_set_alarms
-00116$:
-;	main.c:779: edit_mode = 0;
-;	assignBit
-	clr	_edit_mode
-	ljmp	00130$
-00123$:
-;	main.c:782: else if(touch_sensor) {
-	jb	_touch_sensor,00239$
-	ljmp	00130$
-00239$:
-;	main.c:783: idle_counter = 0;
+;	main.c:793: lcd_string(" <- to see TIME");
+	mov	dptr,#___str_9
+	mov	b, #0x80
+	lcall	_lcd_string
+;	main.c:794: lcd_goto(1,1);
+	mov	_lcd_goto_PARM_2,#0x01
+	mov	dpl, #0x01
+	lcall	_lcd_goto
+;	main.c:795: lcd_string("-> to CONFIGURE");
+	mov	dptr,#___str_10
+	mov	b, #0x80
+	lcall	_lcd_string
+;	main.c:796: idle_counter = 0;
 	clr	a
 	mov	_idle_counter,a
 	mov	(_idle_counter + 1),a
-;	main.c:784: while(++idle_counter < 1000) {
-00117$:
+;	main.c:797: while(next && back){
+00104$:
+	jnb	_next,00106$
+	jnb	_back,00106$
+;	main.c:798: if(++idle_counter>1000){
 	inc	_idle_counter
 	clr	a
-	cjne	a,_idle_counter,00240$
+	cjne	a,_idle_counter,00214$
 	inc	(_idle_counter + 1)
-00240$:
+00214$:
+	clr	c
+	mov	a,#0xe8
+	subb	a,_idle_counter
+	mov	a,#0x03
+	subb	a,(_idle_counter + 1)
+	jnc	00102$
+;	main.c:799: lcd_clear();
+	lcall	_lcd_clear
+;	main.c:800: idle_counter = 0;
+	clr	a
+	mov	_idle_counter,a
+	mov	(_idle_counter + 1),a
+;	main.c:801: return;
+	ljmp	00126$
+00102$:
+;	main.c:803: delay(500);
+	mov	dptr,#0x01f4
+	lcall	_delay
+	sjmp	00104$
+00106$:
+;	main.c:805: lcd_clear();
+	lcall	_lcd_clear
+;	main.c:806: if(!next){
+	jnb	_next,00216$
+	ljmp	00124$
+00216$:
+;	main.c:807: lcd_clear();
+	lcall	_lcd_clear
+;	main.c:808: lcd_goto(1,0);
+	mov	_lcd_goto_PARM_2,#0x00
+	mov	dpl, #0x01
+	lcall	_lcd_goto
+;	main.c:809: lcd_string(" Edit Mode");
+	mov	dptr,#___str_11
+	mov	b, #0x80
+	lcall	_lcd_string
+;	main.c:810: delay(30000);
+	mov	dptr,#0x7530
+	lcall	_delay
+;	main.c:811: lcd_clear();
+	lcall	_lcd_clear
+;	main.c:812: lcd_string(" <- to set ALARM");
+	mov	dptr,#___str_12
+	mov	b, #0x80
+	lcall	_lcd_string
+;	main.c:813: lcd_goto(1,1);
+	mov	_lcd_goto_PARM_2,#0x01
+	mov	dpl, #0x01
+	lcall	_lcd_goto
+;	main.c:814: lcd_string(" -> to set Clock");
+	mov	dptr,#___str_13
+	mov	b, #0x80
+	lcall	_lcd_string
+;	main.c:815: idle_counter = 0;
+	clr	a
+	mov	_idle_counter,a
+	mov	(_idle_counter + 1),a
+;	main.c:816: while(next && back){
+00110$:
+	jnb	_next,00112$
+	jnb	_back,00112$
+;	main.c:817: if(++idle_counter>1000){
+	inc	_idle_counter
+	clr	a
+	cjne	a,_idle_counter,00219$
+	inc	(_idle_counter + 1)
+00219$:
+	clr	c
+	mov	a,#0xe8
+	subb	a,_idle_counter
+	mov	a,#0x03
+	subb	a,(_idle_counter + 1)
+	jnc	00108$
+;	main.c:818: lcd_clear();
+	lcall	_lcd_clear
+;	main.c:819: return;
+	ljmp	00126$
+00108$:
+;	main.c:821: delay(500);
+	mov	dptr,#0x01f4
+	lcall	_delay
+	sjmp	00110$
+00112$:
+;	main.c:823: lcd_clear();
+	lcall	_lcd_clear
+;	main.c:824: if(!next){
+	jb	_next,00116$
+;	main.c:825: set_clock();
+	lcall	_set_clock
+	ljmp	00125$
+00116$:
+;	main.c:827: else if(!back){
+	jnb	_back,00222$
+	ljmp	00125$
+00222$:
+;	main.c:828: set_alarms();
+	lcall	_set_alarms
+	sjmp	00125$
+00124$:
+;	main.c:831: else if(!back){
+	jb	_back,00125$
+;	main.c:832: idle_counter = 0;
+	clr	a
+	mov	_idle_counter,a
+	mov	(_idle_counter + 1),a
+;	main.c:833: while(++idle_counter<1000){
+00118$:
+	inc	_idle_counter
+	clr	a
+	cjne	a,_idle_counter,00224$
+	inc	(_idle_counter + 1)
+00224$:
 	clr	c
 	mov	a,_idle_counter
 	subb	a,#0xe8
 	mov	a,(_idle_counter + 1)
 	subb	a,#0x03
-	jnc	00119$
-;	main.c:785: ds1307_get_time_date(&h, &m, &s, &day, &d, &mo, &y);
-	mov	_ds1307_get_time_date_PARM_2,#_m
-	mov	(_ds1307_get_time_date_PARM_2 + 1),#0x00
-	mov	(_ds1307_get_time_date_PARM_2 + 2),#0x40
-	mov	_ds1307_get_time_date_PARM_3,#_s
-	mov	(_ds1307_get_time_date_PARM_3 + 1),#0x00
-	mov	(_ds1307_get_time_date_PARM_3 + 2),#0x40
-	mov	_ds1307_get_time_date_PARM_4,#_day
-	mov	(_ds1307_get_time_date_PARM_4 + 1),#0x00
-	mov	(_ds1307_get_time_date_PARM_4 + 2),#0x40
-	mov	_ds1307_get_time_date_PARM_5,#_d
-	mov	(_ds1307_get_time_date_PARM_5 + 1),#0x00
-	mov	(_ds1307_get_time_date_PARM_5 + 2),#0x40
-	mov	_ds1307_get_time_date_PARM_6,#_mo
-	mov	(_ds1307_get_time_date_PARM_6 + 1),#0x00
-	mov	(_ds1307_get_time_date_PARM_6 + 2),#0x40
-	mov	_ds1307_get_time_date_PARM_7,#_y
-	mov	(_ds1307_get_time_date_PARM_7 + 1),#0x00
-	mov	(_ds1307_get_time_date_PARM_7 + 2),#0x40
+	jnc	00125$
+;	main.c:834: ds3232_get_time_date(&h, &m, &s, &day, &d, &mo, &y);
+	mov	_ds3232_get_time_date_PARM_2,#_m
+	mov	(_ds3232_get_time_date_PARM_2 + 1),#0x00
+	mov	(_ds3232_get_time_date_PARM_2 + 2),#0x40
+	mov	_ds3232_get_time_date_PARM_3,#_s
+	mov	(_ds3232_get_time_date_PARM_3 + 1),#0x00
+	mov	(_ds3232_get_time_date_PARM_3 + 2),#0x40
+	mov	_ds3232_get_time_date_PARM_4,#_day
+	mov	(_ds3232_get_time_date_PARM_4 + 1),#0x00
+	mov	(_ds3232_get_time_date_PARM_4 + 2),#0x40
+	mov	_ds3232_get_time_date_PARM_5,#_d
+	mov	(_ds3232_get_time_date_PARM_5 + 1),#0x00
+	mov	(_ds3232_get_time_date_PARM_5 + 2),#0x40
+	mov	_ds3232_get_time_date_PARM_6,#_mo
+	mov	(_ds3232_get_time_date_PARM_6 + 1),#0x00
+	mov	(_ds3232_get_time_date_PARM_6 + 2),#0x40
+	mov	_ds3232_get_time_date_PARM_7,#_y
+	mov	(_ds3232_get_time_date_PARM_7 + 1),#0x00
+	mov	(_ds3232_get_time_date_PARM_7 + 2),#0x40
 	mov	dptr,#_h
 	mov	b, #0x40
-	lcall	_ds1307_get_time_date
-;	main.c:786: display(h, m, s, d, mo, y, day);
+	lcall	_ds3232_get_time_date
+;	main.c:835: display(h, m, s, d, mo, y, day);
 	mov	_display_PARM_2,_m
 	mov	_display_PARM_3,_s
 	mov	_display_PARM_4,_d
@@ -3439,18 +4055,179 @@ _main:
 	mov	_display_PARM_7,_day
 	mov	dpl, _h
 	lcall	_display
-;	main.c:789: check_alarms(h, m, s);
-	mov	_check_alarms_PARM_2,_m
-	mov	_check_alarms_PARM_3,_s
-	mov	dpl, _h
-	lcall	_check_alarms
-	sjmp	00117$
-00119$:
-;	main.c:791: touch_sensor = 0;
+	sjmp	00118$
+00125$:
+;	main.c:838: POWER_PULSE = 0;
 ;	assignBit
-	clr	_touch_sensor
-;	main.c:795: }
-	ljmp	00130$
+	clr	_POWER_PULSE
+;	main.c:839: EA = 1;
+;	assignBit
+	setb	_EA
+;	main.c:840: PCON |= 0x02;
+	orl	_PCON,#0x02
+00126$:
+;	main.c:841: }
+	pop	psw
+	pop	(0+0)
+	pop	(0+1)
+	pop	(0+2)
+	pop	(0+3)
+	pop	(0+4)
+	pop	(0+5)
+	pop	(0+6)
+	pop	(0+7)
+	pop	dph
+	pop	dpl
+	pop	b
+	pop	acc
+	pop	bits
+	ljmp	sdcc_atomic_maybe_rollback
+;------------------------------------------------------------
+;Allocation info for local variables in function 'main'
+;------------------------------------------------------------
+;checker       Allocated with name '_main_checker_10001_169'
+;------------------------------------------------------------
+;	main.c:843: void main() {
+;	-----------------------------------------
+;	 function main
+;	-----------------------------------------
+_main:
+;	main.c:844: EA  = 1;   // Enable global interrupts
+;	assignBit
+	setb	_EA
+;	main.c:845: EX0 = 1;   // Enable INT0 (P3.2)
+;	assignBit
+	setb	_EX0
+;	main.c:846: IT0 = 1;   // Set INT0 to level-triggered
+;	assignBit
+	setb	_IT0
+;	main.c:847: EX1 = 1;   // Enable INT1 (P3.3)
+;	assignBit
+	setb	_EX1
+;	main.c:848: IT1 = 1;   // Set INT1 to level-triggered
+;	assignBit
+	setb	_IT1
+;	main.c:849: IP |= 0x04;
+	orl	_IP,#0x04
+;	main.c:851: BUZZER = 0;
+;	assignBit
+	clr	_BUZZER
+;	main.c:852: POWER_PULSE = 1;
+;	assignBit
+	setb	_POWER_PULSE
+;	main.c:855: lcd_init();     // LCD init
+	lcall	_lcd_init
+;	main.c:856: i2c_init();     // I2C init
+	lcall	_i2c_init
+;	main.c:857: ds3232_init();  // DS3232 RTC init
+	lcall	_ds3232_init
+;	main.c:860: checker[0] = read_eeprom(0x003B);
+	mov	dptr,#0x003b
+	lcall	_read_eeprom
+	mov	a, dpl
+	mov	_main_checker_10001_169,a
+;	main.c:861: checker[1] = read_eeprom(0x003C);
+	mov	dptr,#0x003c
+	lcall	_read_eeprom
+	mov	a, dpl
+	mov	(_main_checker_10001_169 + 0x0001),a
+;	main.c:862: checker[2] = read_eeprom(0x003D);
+	mov	dptr,#0x003d
+	lcall	_read_eeprom
+	mov	a, dpl
+	mov	(_main_checker_10001_169 + 0x0002),a
+;	main.c:863: checker[3] = read_eeprom(0x003E);
+	mov	dptr,#0x003e
+	lcall	_read_eeprom
+	mov	a, dpl
+	mov	(_main_checker_10001_169 + 0x0003),a
+;	main.c:864: if(!(checker[0] == 'I' && checker[1] == 'N' && checker[2] == 'I' && checker[3] == 'T')){
+	mov	a,#0x49
+	cjne	a,_main_checker_10001_169,00101$
+	mov	a,#0x4e
+	cjne	a,(_main_checker_10001_169 + 0x0001),00101$
+	mov	a,#0x49
+	cjne	a,(_main_checker_10001_169 + 0x0002),00101$
+	mov	a,#0x54
+	cjne	a,(_main_checker_10001_169 + 0x0003),00142$
+	ljmp	00102$
+00142$:
+00101$:
+;	main.c:865: lcd_clear();
+	lcall	_lcd_clear
+;	main.c:866: set_alarms();
+	lcall	_set_alarms
+;	main.c:867: lcd_init();
+	lcall	_lcd_init
+;	main.c:868: lcd_cmd(0x80);
+	mov	dpl, #0x80
+	lcall	_lcd_cmd
+;	main.c:869: write_eeprom(0x003B, 'I');
+	mov	_write_eeprom_PARM_2,#0x49
+	mov	dptr,#0x003b
+	lcall	_write_eeprom
+;	main.c:870: write_eeprom(0x003C, 'N');
+	mov	_write_eeprom_PARM_2,#0x4e
+	mov	dptr,#0x003c
+	lcall	_write_eeprom
+;	main.c:871: write_eeprom(0x003D, 'I');
+	mov	_write_eeprom_PARM_2,#0x49
+	mov	dptr,#0x003d
+	lcall	_write_eeprom
+;	main.c:872: write_eeprom(0x003E, 'T');
+	mov	_write_eeprom_PARM_2,#0x54
+	mov	dptr,#0x003e
+	lcall	_write_eeprom
+;	main.c:873: write_eeprom(0x003F, 0x0);
+	mov	_write_eeprom_PARM_2,#0x00
+	mov	dptr,#0x003f
+	lcall	_write_eeprom
+;	main.c:874: write_eeprom(0x003A, 0x0);
+	mov	_write_eeprom_PARM_2,#0x00
+	mov	dptr,#0x003a
+	lcall	_write_eeprom
+;	main.c:875: lcd_clear();
+	lcall	_lcd_clear
+;	main.c:876: lcd_goto(0,0);
+	mov	_lcd_goto_PARM_2,#0x00
+	mov	dpl, #0x00
+	lcall	_lcd_goto
+;	main.c:877: lcd_string(" NOW INIT");
+	mov	dptr,#___str_14
+	mov	b, #0x80
+	lcall	_lcd_string
+;	main.c:878: delay(30000);
+	mov	dptr,#0x7530
+	lcall	_delay
+;	main.c:879: lcd_clear();
+	lcall	_lcd_clear
+	sjmp	00103$
+00102$:
+;	main.c:883: lcd_clear();
+	lcall	_lcd_clear
+;	main.c:884: lcd_goto(0,0);
+	mov	_lcd_goto_PARM_2,#0x00
+	mov	dpl, #0x00
+	lcall	_lcd_goto
+;	main.c:885: lcd_string(" PREV INIT");
+	mov	dptr,#___str_15
+	mov	b, #0x80
+	lcall	_lcd_string
+;	main.c:886: delay(30000);
+	mov	dptr,#0x7530
+	lcall	_delay
+;	main.c:887: lcd_clear();
+	lcall	_lcd_clear
+00103$:
+;	main.c:889: POWER_PULSE = 0;
+;	assignBit
+	clr	_POWER_PULSE
+;	main.c:890: PCON |= 0x02;
+	orl	_PCON,#0x02
+;	main.c:891: while(1);
+00108$:
+;	main.c:892: }
+	sjmp	00108$
 	.area CSEG    (CODE)
 	.area CONST   (CODE)
 	.area CONST   (CODE)
@@ -3490,7 +4267,7 @@ ___str_6:
 	.area CSEG    (CODE)
 	.area CONST   (CODE)
 ___str_7:
-	.ascii " Alarm "
+	.ascii " Alarm Triggered"
 	.db 0x00
 	.area CSEG    (CODE)
 	.area CONST   (CODE)
@@ -3500,12 +4277,37 @@ ___str_8:
 	.area CSEG    (CODE)
 	.area CONST   (CODE)
 ___str_9:
-	.ascii " -> to set clock"
+	.ascii " <- to see TIME"
 	.db 0x00
 	.area CSEG    (CODE)
 	.area CONST   (CODE)
 ___str_10:
-	.ascii " <- to set alarm"
+	.ascii "-> to CONFIGURE"
+	.db 0x00
+	.area CSEG    (CODE)
+	.area CONST   (CODE)
+___str_11:
+	.ascii " Edit Mode"
+	.db 0x00
+	.area CSEG    (CODE)
+	.area CONST   (CODE)
+___str_12:
+	.ascii " <- to set ALARM"
+	.db 0x00
+	.area CSEG    (CODE)
+	.area CONST   (CODE)
+___str_13:
+	.ascii " -> to set Clock"
+	.db 0x00
+	.area CSEG    (CODE)
+	.area CONST   (CODE)
+___str_14:
+	.ascii " NOW INIT"
+	.db 0x00
+	.area CSEG    (CODE)
+	.area CONST   (CODE)
+___str_15:
+	.ascii " PREV INIT"
 	.db 0x00
 	.area CSEG    (CODE)
 	.area XINIT   (CODE)

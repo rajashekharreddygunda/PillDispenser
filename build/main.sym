@@ -222,10 +222,10 @@ Symbol Table
     _IE                                                         =  0000A8 G
     _IE0                                                        =  000089 G
     _IE1                                                        =  00008B G
-    _IN1                                                        =  0000A1 G
-    _IN2                                                        =  0000A2 G
-    _IN3                                                        =  0000A3 G
-    _IN4                                                        =  0000A4 G
+    _IN1                                                        =  0000A4 G
+    _IN2                                                        =  0000A3 G
+    _IN3                                                        =  0000A2 G
+    _IN4                                                        =  0000A1 G
     _INT0                                                       =  0000B2 G
     _INT1                                                       =  0000B3 G
     _IP                                                         =  0000B8 G
@@ -282,6 +282,7 @@ Symbol Table
     _P3_6                                                       =  0000B6 G
     _P3_7                                                       =  0000B7 G
     _PCON                                                       =  000087 G
+    _POWER_PULSE                                                =  0000A7 G
     _PS                                                         =  0000BC G
     _PSW                                                        =  0000D0 G
     _PT0                                                        =  0000B9 G
@@ -295,7 +296,6 @@ Symbol Table
     _RCLK                                                       =  0000CD G
     _RD                                                         =  0000B7 G
     _REN                                                        =  00009C G
-    _RESET                                                      =  000097 G
     _RI                                                         =  000098 G
     _RS0                                                        =  0000D3 G
 ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Intel 8051)               Page 6
@@ -313,7 +313,6 @@ Symbol Table
     _SM1                                                        =  00009E G
     _SM2                                                        =  00009D G
     _SP                                                         =  000081 G
- 18 _Settings                                                      0005F1 GR
     _T0                                                         =  0000B4 G
     _T1                                                         =  0000B5 G
     _T2                                                         =  000090 G
@@ -347,25 +346,30 @@ Symbol Table
     _TR2                                                        =  0000CA G
     _TXD                                                        =  0000B1 G
     _WR                                                         =  0000B6 G
- 19 ___str_0                                                       000000 R
- 19 ___str_1                                                       000011 R
- 19 ___str_10                                                      000090 R
- 19 ___str_2                                                       000022 R
- 19 ___str_3                                                       000033 R
- 19 ___str_4                                                       00003A R
- 19 ___str_5                                                       00004A R
- 19 ___str_6                                                       000057 R
- 19 ___str_7                                                       000069 R
- 19 ___str_8                                                       000071 R
- 19 ___str_9                                                       00007F R
+ 1A ___str_0                                                       000000 R
+ 1A ___str_1                                                       000011 R
+ 1A ___str_10                                                      000098 R
+ 1A ___str_11                                                      0000A8 R
+ 1A ___str_12                                                      0000B3 R
+ 1A ___str_13                                                      0000C4 R
+ 1A ___str_14                                                      0000D5 R
+ 1A ___str_15                                                      0000DF R
+ 1A ___str_2                                                       000022 R
+ 1A ___str_3                                                       000033 R
+ 1A ___str_4                                                       00003A R
+ 1A ___str_5                                                       00004A R
 ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Intel 8051)               Page 7
 Hexadecimal [24-Bits]
 
 Symbol Table
 
+ 1A ___str_6                                                       000057 R
+ 1A ___str_7                                                       000069 R
+ 1A ___str_8                                                       00007A R
+ 1A ___str_9                                                       000088 R
     __gptrget                                                      ****** GX
     __gptrput                                                      ****** GX
-  F __interrupt_vect                                               000000 R
+ 10 __interrupt_vect                                               000000 R
     __mcs51_genRAMCLEAR                                            ****** GX
     __mcs51_genXINIT                                               ****** GX
     __mcs51_genXRAMCLEAR                                           ****** GX
@@ -374,115 +378,119 @@ Symbol Table
     __mulint                                                       ****** GX
     __mulint_PARM_2                                                ****** GX
     __sdcc_gsinit_startup                                          ****** GX
-  F __sdcc_program_startup                                         000059 GR
-  7 __start__stack                                                 000000 GR
-    _alarm                                                      =  0000B3 G
-  A _alarm_check                                                   000003 GR
-  8 _alarm_hours                                                   000000 GR
-  5 _alarm_index                                                   000012 GR
-  8 _alarm_minutes                                                 000008 GR
+ 10 __sdcc_program_startup                                         000059 GR
+  8 __start__stack                                                 000000 GR
+ 19 _alarm_arranger                                                0006AD GR
+  7 _alarm_arranger_PARM_2                                         000000 GR
+  7 _alarm_arranger_PARM_3                                         000003 GR
+  7 _alarm_arranger___index_10001_72                               00000D R
+  7 _alarm_arranger_hours_10000_63                                 000006 R
+  7 _alarm_arranger_i_10000_64                                     000009 R
+  7 _alarm_arranger_min_idx_10000_64                               00000A R
+  7 _alarm_arranger_sloc0_1_0                                      00000F R
+  7 _alarm_arranger_sloc1_1_0                                      000010 R
+  7 _alarm_arranger_temp_30001_71                                  00000B R
+  9 _alarm_hours                                                   000000 GR
+  6 _alarm_index                                                   000011 GR
+  9 _alarm_minutes                                                 000008 GR
+ 19 _alarm_triggered                                               000FC4 GR
     _back                                                       =  0000B7 G
- 18 _bcd_to_dec                                                    000289 GR
-  5 _buf                                                           00002C GR
- 18 _check_alarms                                                  000AEC GR
-  5 _check_alarms_PARM_2                                           000055 GR
-  5 _check_alarms_PARM_3                                           000056 GR
-  5 _check_alarms_j_10000_125                                      000057 R
-    _clock                                                      =  0000B2 G
-  A _clock_check                                                   000002 GR
-  5 _count_down                                                    000031 GR
-  5 _d                                                             00000E GR
-  5 _date_str                                                      00001F GR
-  5 _day                                                           000011 GR
- 18 _dec_to_bcd                                                    000271 GR
- 18 _delay                                                         000000 GR
- 18 _delay_ms                                                      000024 GR
- 18 _display                                                       000438 GR
-  5 _display_PARM_2                                                00004C GR
-  5 _display_PARM_3                                                00004D GR
-  5 _display_PARM_4                                                00004E GR
-  5 _display_PARM_5                                                00004F GR
-  5 _display_PARM_6                                                000050 GR
-  5 _display_PARM_7                                                000051 GR
+ 19 _bcd_to_dec                                                    00028D GR
+  6 _buf                                                           00002B GR
+ 19 _configuration                                                 0010ED GR
+  6 _d                                                             00000D GR
+  6 _date_str                                                      00001E GR
+  6 _day                                                           000010 GR
+ 19 _dec_to_bcd                                                    000275 GR
+ 19 _delay                                                         000000 GR
+ 19 _delay_ms                                                      000024 GR
+ 19 _display                                                       00043C GR
+  6 _display_PARM_2                                                000049 GR
+  6 _display_PARM_3                                                00004A GR
+  6 _display_PARM_4                                                00004B GR
+  6 _display_PARM_5                                                00004C GR
+  6 _display_PARM_6                                                00004D GR
+  6 _display_PARM_7                                                00004E GR
     _down                                                       =  0000B5 G
- 18 _ds1307_get_time_date                                          000309 GR
-  5 _ds1307_get_time_date_PARM_2                                   00003A GR
-  5 _ds1307_get_time_date_PARM_3                                   00003D GR
-  5 _ds1307_get_time_date_PARM_4                                   000040 GR
-  5 _ds1307_get_time_date_PARM_5                                   000043 GR
-  5 _ds1307_get_time_date_PARM_6                                   000046 GR
-  5 _ds1307_get_time_date_PARM_7                                   000049 GR
- 18 _ds1307_init                                                   00029B GR
- 18 _ds1307_read_ram                                               000620 GR
- 18 _ds1307_set_time_date                                          0002B3 GR
-  5 _ds1307_set_time_date_PARM_2                                   000034 GR
-  5 _ds1307_set_time_date_PARM_3                                   000035 GR
-  5 _ds1307_set_time_date_PARM_4                                   000036 GR
+ 19 _ds3232_get_time_date                                          00030D GR
+  6 _ds3232_get_time_date_PARM_2                                   000037 GR
+  6 _ds3232_get_time_date_PARM_3                                   00003A GR
+  6 _ds3232_get_time_date_PARM_4                                   00003D GR
+  6 _ds3232_get_time_date_PARM_5                                   000040 GR
+  6 _ds3232_get_time_date_PARM_6                                   000043 GR
 ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Intel 8051)               Page 8
 Hexadecimal [24-Bits]
 
 Symbol Table
 
-  5 _ds1307_set_time_date_PARM_5                                   000037 GR
-  5 _ds1307_set_time_date_PARM_6                                   000038 GR
-  5 _ds1307_set_time_date_PARM_7                                   000039 GR
- 18 _ds1307_write_ram                                              0005F8 GR
-  5 _ds1307_write_ram_PARM_2                                       000052 GR
-  5 _dummy                                                         000000 GR
-  A _edit_mode                                                     000000 GR
-  5 _h                                                             00000B GR
-  5 _hr                                                            00002F GR
- 18 _i2c_init                                                      0001A9 GR
- 18 _i2c_read                                                      000213 GR
-  A _i2c_read_sloc0_1_0                                            000004 R
- 18 _i2c_start                                                     0001B3 GR
- 18 _i2c_stop                                                      0001C8 GR
- 18 _i2c_write                                                     0001DA GR
-  5 _idle_counter                                                  000009 GR
-  5 _index                                                         000014 GR
- 18 _int_to_str                                                    000162 GR
-  6 _int_to_str_PARM_2                                             000000 GR
- 18 _lcd_char                                                      00009F GR
- 18 _lcd_clear                                                     0000EB GR
- 18 _lcd_cmd                                                       00007E GR
- 18 _lcd_goto                                                      0000F7 GR
-  5 _lcd_goto_PARM_2                                               000033 GR
- 18 _lcd_init                                                      00010E GR
- 18 _lcd_string                                                    0000C0 GR
- 18 _load_alarms_from_ds1307                                       00067B GR
-  5 _m                                                             00000C GR
- 18 _main                                                          000C2B GR
-  5 _main_checker_10001_141                                        000058 R
-  8 _max_vals                                                      000010 GR
-  5 _min                                                           000030 GR
-  8 _min_vals                                                      000017 GR
-  5 _mo                                                            00000F GR
+  6 _ds3232_get_time_date_PARM_7                                   000046 GR
+ 19 _ds3232_init                                                   00029F GR
+ 19 _ds3232_set_alarm1                                             000917 GR
+  6 _ds3232_set_alarm1_PARM_2                                      000052 GR
+  6 _ds3232_set_alarm1_PARM_3                                      000053 GR
+ 19 _ds3232_set_time_date                                          0002B7 GR
+  6 _ds3232_set_time_date_PARM_2                                   000031 GR
+  6 _ds3232_set_time_date_PARM_3                                   000032 GR
+  6 _ds3232_set_time_date_PARM_4                                   000033 GR
+  6 _ds3232_set_time_date_PARM_5                                   000034 GR
+  6 _ds3232_set_time_date_PARM_6                                   000035 GR
+  6 _ds3232_set_time_date_PARM_7                                   000036 GR
+  6 _h                                                             00000A GR
+  6 _hr                                                            00002E GR
+ 19 _i2c_init                                                      0001A9 GR
+ 19 _i2c_read                                                      000217 GR
+  B _i2c_read_sloc0_1_0                                            000001 R
+ 19 _i2c_start                                                     0001B3 GR
+ 19 _i2c_stop                                                      0001C8 GR
+ 19 _i2c_write                                                     0001DA GR
+  B _i2c_write_ack_10000_29                                        000000 R
+  6 _idle_counter                                                  000008 GR
+  6 _index                                                         000013 GR
+ 19 _int_to_str                                                    000162 GR
+  7 _int_to_str_PARM_2                                             000000 GR
+ 19 _lcd_char                                                      00009F GR
+ 19 _lcd_clear                                                     0000EB GR
+ 19 _lcd_cmd                                                       00007E GR
+ 19 _lcd_goto                                                      0000F7 GR
+  6 _lcd_goto_PARM_2                                               000030 GR
+ 19 _lcd_init                                                      00010E GR
+ 19 _lcd_string                                                    0000C0 GR
+  6 _m                                                             00000B GR
+ 19 _main                                                          00128A GR
+  6 _main_checker_10001_169                                        00005A R
+  9 _max_vals                                                      000010 GR
+  6 _min                                                           00002F GR
+  9 _min_vals                                                      000017 GR
+  6 _mo                                                            00000E GR
     _next                                                       =  0000B6 G
-  5 _num_alarms                                                    000008 GR
- 18 _pulse_enable                                                  000048 GR
- 18 _reset_motor_position                                          000BBD GR
-  5 _s                                                             00000D GR
- 18 _send_nibble                                                   000058 GR
- 18 _set_alarms                                                    0007F6 GR
- 18 _set_clock                                                     0006C2 GR
- 18 _step_motor                                                    00056A GR
-  5 _time_date                                                     000001 GR
-  5 _time_str                                                      000016 GR
- 18 _touch                                                         000AE5 GR
-  A _touch_sensor                                                  000001 GR
+  6 _num_alarms                                                    000007 GR
+ 19 _pulse_enable                                                  000048 GR
+ 19 _read_eeprom                                                   000635 GR
+  6 _s                                                             00000C GR
+ 19 _send_nibble                                                   000058 GR
+ 19 _set_alarms                                                    000AE8 GR
+  6 _set_alarms_sloc0_1_0                                          000058 R
+  6 _set_alarms_total_mins1_50002_140                              000056 R
+  6 _set_alarms_total_mins_10002_135                               000054 R
+ 19 _set_clock                                                     0009B0 GR
+ 19 _step_motor                                                    00056E GR
+  6 _time_date                                                     000000 GR
+  6 _time_str                                                      000015 GR
     _up                                                         =  0000B4 G
- 18 _write_alarm_to_ds1307                                         00065D GR
-  5 _write_alarm_to_ds1307_PARM_2                                  000053 GR
-  5 _write_alarm_to_ds1307_PARM_3                                  000054 GR
-  5 _y                                                             000010 GR
-    a                                                           =  0000E0 L
-    a.0                                                         =  0000E0 L
-    a.1                                                         =  0000E1 L
+ 19 _write_alarm_to_eeprom                                         000684 GR
 ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Intel 8051)               Page 9
 Hexadecimal [24-Bits]
 
 Symbol Table
 
+  6 _write_alarm_to_eeprom_PARM_2                                  000050 GR
+  6 _write_alarm_to_eeprom_PARM_3                                  000051 GR
+ 19 _write_eeprom                                                  0005F5 GR
+  6 _write_eeprom_PARM_2                                           00004F GR
+  6 _y                                                             00000F GR
+    a                                                           =  0000E0 L
+    a.0                                                         =  0000E0 L
+    a.1                                                         =  0000E1 L
     a.2                                                         =  0000E2 L
     a.3                                                         =  0000E3 L
     a.4                                                         =  0000E4 L
@@ -516,11 +524,25 @@ Symbol Table
     b.5                                                         =  0000F5 L
     b.6                                                         =  0000F6 L
     b.7                                                         =  0000F7 L
+  5 b0                                                          =  008000 R
+  5 b1                                                          =  008100 R
+  5 b2                                                          =  008200 R
+  5 b3                                                          =  008300 R
+  5 b4                                                          =  008400 R
+  5 b5                                                          =  008500 R
+  5 b6                                                          =  008600 R
+  5 b7                                                          =  008700 R
+  5 bits                                                           000000 R
     cprl2                                                       =  0000C8 L
     ct2                                                         =  0000C9 L
     cy                                                          =  0000D7 L
     dph                                                         =  000083 L
     dpl                                                         =  000082 L
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Intel 8051)              Page 10
+Hexadecimal [24-Bits]
+
+Symbol Table
+
     ea                                                          =  0000AF L
     es                                                          =  0000AC L
     et0                                                         =  0000A9 L
@@ -538,11 +560,6 @@ Symbol Table
     ie.3                                                        =  0000AB L
     ie.4                                                        =  0000AC L
     ie.5                                                        =  0000AD L
-ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Intel 8051)              Page 10
-Hexadecimal [24-Bits]
-
-Symbol Table
-
     ie.7                                                        =  0000AF L
     ie0                                                         =  000089 L
     ie1                                                         =  00008B L
@@ -581,6 +598,11 @@ Symbol Table
     p2.0                                                        =  0000A0 L
     p2.1                                                        =  0000A1 L
     p2.2                                                        =  0000A2 L
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Intel 8051)              Page 11
+Hexadecimal [24-Bits]
+
+Symbol Table
+
     p2.3                                                        =  0000A3 L
     p2.4                                                        =  0000A4 L
     p2.5                                                        =  0000A5 L
@@ -598,11 +620,6 @@ Symbol Table
     pcon                                                        =  000087 L
     ps                                                          =  0000BC L
     psw                                                         =  0000D0 L
-ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Intel 8051)              Page 11
-Hexadecimal [24-Bits]
-
-Symbol Table
-
     psw.0                                                       =  0000D0 L
     psw.1                                                       =  0000D1 L
     psw.2                                                       =  0000D2 L
@@ -635,17 +652,23 @@ Symbol Table
     scon.5                                                      =  00009D L
     scon.6                                                      =  00009E L
     scon.7                                                      =  00009F L
-  F sdcc_atomic_compare_exchange_gptr_impl                         00004F GR
-  F sdcc_atomic_compare_exchange_idata_impl                        000028 R
-  F sdcc_atomic_compare_exchange_pdata_impl                        000030 R
-  F sdcc_atomic_compare_exchange_xdata_impl                        000038 R
-  F sdcc_atomic_exchange_exit                                      00004C R
-  F sdcc_atomic_exchange_gptr_impl                                 00003F GR
-  F sdcc_atomic_exchange_idata_impl                                000047 R
-  F sdcc_atomic_exchange_pdata_impl                                00001A R
-  F sdcc_atomic_exchange_rollback_end                              00003F GR
-  F sdcc_atomic_exchange_rollback_start                            000018 GR
-  F sdcc_atomic_exchange_xdata_impl                                000022 R
+ 10 sdcc_atomic_compare_exchange_gptr_impl                         00004F GR
+ 10 sdcc_atomic_compare_exchange_idata_impl                        000028 R
+ 10 sdcc_atomic_compare_exchange_pdata_impl                        000030 R
+ 10 sdcc_atomic_compare_exchange_xdata_impl                        000038 R
+ 10 sdcc_atomic_exchange_exit                                      00004C R
+ 10 sdcc_atomic_exchange_gptr_impl                                 00003F GR
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Intel 8051)              Page 12
+Hexadecimal [24-Bits]
+
+Symbol Table
+
+ 10 sdcc_atomic_exchange_idata_impl                                000047 R
+ 10 sdcc_atomic_exchange_pdata_impl                                00001A R
+ 10 sdcc_atomic_exchange_rollback_end                              00003F GR
+ 10 sdcc_atomic_exchange_rollback_start                            000018 GR
+ 10 sdcc_atomic_exchange_xdata_impl                                000022 R
+    sdcc_atomic_maybe_rollback                                     ****** GX
     sm0                                                         =  00009F L
     sm1                                                         =  00009E L
     sm2                                                         =  00009D L
@@ -658,11 +681,6 @@ Symbol Table
     t2con.4                                                     =  0000CC L
     t2con.5                                                     =  0000CD L
     t2con.6                                                     =  0000CE L
-ASxxxx Assembler V02.00 + NoICE + SDCC mods  (Intel 8051)              Page 12
-Hexadecimal [24-Bits]
-
-Symbol Table
-
     t2con.7                                                     =  0000CF L
     tb8                                                         =  00009B L
     tclk                                                        =  0000CC L
@@ -702,27 +720,28 @@ Area Table
    2 RSEG0                                      size      0   flags    8
    3 RSEG1                                      size      0   flags    8
    4 REG_BANK_0                                 size      8   flags    4
-   5 DSEG                                       size     5C   flags    0
-   6 OSEG                                       size      3   flags    4
-   7 SSEG                                       size      1   flags    0
-   8 ISEG                                       size     1E   flags    0
-   9 IABS                                       size      0   flags    8
-   A BSEG                                       size      5   flags   80
-   B PSEG                                       size      0   flags   50
-   C XSEG                                       size      0   flags   40
-   D XABS                                       size      0   flags   48
-   E XISEG                                      size      0   flags   40
-   F HOME                                       size     5C   flags   20
-  10 GSINIT0                                    size      0   flags   20
-  11 GSINIT1                                    size      0   flags   20
-  12 GSINIT2                                    size      0   flags   20
-  13 GSINIT3                                    size      0   flags   20
-  14 GSINIT4                                    size      0   flags   20
-  15 GSINIT5                                    size      0   flags   20
-  16 GSINIT                                     size     5D   flags   20
-  17 GSFINAL                                    size      3   flags   20
-  18 CSEG                                       size    DF3   flags   20
-  19 CONST                                      size     A1   flags   20
-  1A XINIT                                      size      0   flags   20
-  1B CABS                                       size      0   flags   28
+   5 BIT_BANK                                   size      1   flags    4
+   6 DSEG                                       size     5E   flags    0
+   7 OSEG                                       size     13   flags    4
+   8 SSEG                                       size      1   flags    0
+   9 ISEG                                       size     1E   flags    0
+   A IABS                                       size      0   flags    8
+   B BSEG                                       size      2   flags   80
+   C PSEG                                       size      0   flags   50
+   D XSEG                                       size      0   flags   40
+   E XABS                                       size      0   flags   48
+   F XISEG                                      size      0   flags   40
+  10 HOME                                       size     5C   flags   20
+  11 GSINIT0                                    size      0   flags   20
+  12 GSINIT1                                    size      0   flags   20
+  13 GSINIT2                                    size      0   flags   20
+  14 GSINIT3                                    size      0   flags   20
+  15 GSINIT4                                    size      0   flags   20
+  16 GSINIT5                                    size      0   flags   20
+  17 GSINIT                                     size     55   flags   20
+  18 GSFINAL                                    size      3   flags   20
+  19 CSEG                                       size   136D   flags   20
+  1A CONST                                      size     EA   flags   20
+  1B XINIT                                      size      0   flags   20
+  1C CABS                                       size      0   flags   28
 
